@@ -9,7 +9,7 @@ Config* initConfig() {
     Config* c;
     if ((c = malloc(sizeof *c)) != NULL) {
         c->configFile = "";
-        c->watchDir = DD_DEFAULT_WATCH_DIR;
+        c->watchDir = AM_DEFAULT_WATCH_DIR;
         c->pid = -1;
         c->running = false;
     }

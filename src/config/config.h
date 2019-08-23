@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define DD_DEFAULT_WATCH_DIR "/var/lib/MinKNOW/data/reads"
+#define AM_DEFAULT_WATCH_DIR "/var/lib/MinKNOW/data/reads"
 
 // Config is the struct containing config information
 typedef struct Config {

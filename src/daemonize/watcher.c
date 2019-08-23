@@ -1,5 +1,8 @@
 #include <string.h>
+
 #include "watcher.h"
+#include "workerpool.h"
+#include "../fastq/fastq.h"
 #include "../log/slog.h"
 
 // getExt takes a filename and returns the extension
@@ -12,11 +15,12 @@ char* getExt(const char *filename) {
 }
 
 // watcherCallback is a test callback function for when the watcher spots a change
-void watcherCallback(fsw_cevent const * const events, const unsigned int event_num, void * data) {
+void watcherCallback(fsw_cevent const* const events, const unsigned int event_num, void* workerPool) {
 
+    // get the workerpool ready to process an event
+    tpool_t* wp;
+    wp = (tpool_t*)workerPool; 
 
-    // TODO: need to make a copy of any event if I plan to use later...
-    
     // set the flags from libfswatch that we want to check events against
     int fileCheckList = Created | IsFile;
 
@@ -68,32 +72,10 @@ void watcherCallback(fsw_cevent const * const events, const unsigned int event_n
             }
             continue;
         }
-        slog(0, SLOG_INFO, "\t- sending file on to do cool stuff with");
+
+        // copy the filename to the workerpool queue
+        if (!tpool_add_work(wp, justPrintMOFO, (void *)events[i].path)) {
+            slog(0, SLOG_ERROR, "\t- failed to send the file to the workerpool");
+        }
 	}
 }
-
-// setupWatcher starts a watcher on the specified directory
-int setupWatcher(char* watchPath) {
-    const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
-    
-    // add the path(s) for the watcher to watch
-    if (FSW_OK != fsw_add_path(handle, watchPath)) {
-        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", watchPath);
-        return 1;
-    }
-
-    // set the watcher callback function
-    if (FSW_OK != fsw_set_callback(handle, watcherCallback, NULL)) {
-        slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
-        return 1;
-    }
-
-    // start the watcher
-    if (FSW_OK != fsw_start_monitor(handle)) {
-        slog(0, SLOG_ERROR, "could not start the watcher");
-        return 1;
-    }
-    return 0;
-}
-
-

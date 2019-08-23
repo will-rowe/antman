@@ -4,7 +4,9 @@ Automated Nanopore Tracking, Modification + Analysis daemoN
 
 > very much a WIP (incl. the backronym)
 
-## What is it
+***
+
+## What is it
 
 At the moment, it doesn't do much...
 

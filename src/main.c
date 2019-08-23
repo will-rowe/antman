@@ -11,10 +11,10 @@
 #include "log/slog.h"
 #include "log/helpers.h"
 
-#define DD_PROG_NAME "antman"
-#define DD_VERSION "0.0.1"
-#define DD_CONFIG "/Users/willrowe/Google Drive/code/c/projects/antman/.antman.config"
-#define DD_WORKDIR "/Users/willrowe/Google Drive/code/c/projects/antman" // working directory for the daemon
+#define AM_PROG_NAME "antman"
+#define AM_VERSION "0.0.1"
+#define AM_CONFIG "/Users/willrowe/Google Drive/code/c/projects/antman/.antman.config"
+#define AM_WORKDIR "/Users/willrowe/Google Drive/code/c/projects/antman" // working directory for the daemon
 
 /*
    printUsage prints the usage info for antman
@@ -31,22 +31,22 @@ void printUsage(void) {
 }
 
 /*
-   stopantman
+   stopAntman
 */
-int stopantman(Config* ddconfig) {
-    if (!ddconfig->running) {
+int stopAntman(Config* amConfig) {
+    if (!amConfig->running) {
         slog(0, SLOG_WARN, "daemon is already stopped, ignoring stop request");
     } else {
         slog(0, SLOG_INFO, "stopping the daemon...");
-        slog(0, SLOG_INFO, "\t- daemon PID: %d", ddconfig->pid);
-        kill(ddconfig->pid, SIGTERM);
+        slog(0, SLOG_INFO, "\t- daemon PID: %d", amConfig->pid);
+        kill(amConfig->pid, SIGTERM);
 
         //TODO: instead of the above, use waitpid, then decide to use a SIGKILL and then harvest zombies
 
         // update the config
-        ddconfig->pid = -1;
-        ddconfig->running = false;
-        if (writeConfig(ddconfig, ddconfig->configFile) != 0 ) {
+        amConfig->pid = -1;
+        amConfig->running = false;
+        if (writeConfig(amConfig, amConfig->configFile) != 0 ) {
             slog(0, SLOG_ERROR, "failed to update config file");
             return 1;
         }
@@ -55,9 +55,9 @@ int stopantman(Config* ddconfig) {
 }
 
 /*
-   setantman is used to set the watch directory
+   setAntman is used to set the watch directory
 */
-int setantman(Config* ddconfig, char* dirName) {
+int setAntman(Config* amConfig, char* dirName) {
     slog(0, SLOG_INFO, "setting the watch directory...");
 
     // check directory exists and is accessible
@@ -66,8 +66,8 @@ int setantman(Config* ddconfig, char* dirName) {
         closedir(dir);
 
         // update the config and re-write the file
-        ddconfig->watchDir = dirName;
-        if (writeConfig(ddconfig, ddconfig->configFile) != 0 ) {
+        amConfig->watchDir = dirName;
+        if (writeConfig(amConfig, amConfig->configFile) != 0 ) {
             slog(0, SLOG_ERROR, "failed to update config file with new watch directory");
             return 1;
         } 
@@ -83,21 +83,20 @@ int setantman(Config* ddconfig, char* dirName) {
 }
 
 /*
-   startantman
+   startAntman
 */
-void startantman(Config* ddconfig, char* logName) {
-    if (ddconfig->running) {
+int startAntman(Config* amConfig, char* logName) {
+    if (amConfig->running) {
         slog(0, SLOG_WARN, "daemon is already running, ignoring start request");
-        slog(0, SLOG_INFO, "\t- daemon PID: %d", ddconfig->pid);
-    } else {
-        slog(0, SLOG_INFO, "starting the daemon...");
-        slog(0, SLOG_INFO, "\t- changing working directory to: %s", DD_WORKDIR);
-        slog(0, SLOG_INFO, "\t- redirecting antman log to file: %s/%s.log", DD_WORKDIR, logName);
-        slog(0, SLOG_INFO, "\t- directory to watch: %s", ddconfig->watchDir);
-        slog(0, SLOG_INFO, "donzo.");
-        startDaemon(DD_PROG_NAME, DD_WORKDIR, ddconfig);
+        slog(0, SLOG_INFO, "\t- daemon PID: %d", amConfig->pid);
+        return 0;
     }
-    return;
+    slog(0, SLOG_INFO, "starting the daemon...");
+    slog(0, SLOG_INFO, "\t- changing working directory to: %s", AM_WORKDIR);
+    slog(0, SLOG_INFO, "\t- redirecting antman log to file: %s/%s.log", AM_WORKDIR, logName);
+    slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watchDir);
+    slog(0, SLOG_INFO, "donzo.");
+    return startDaemon(AM_PROG_NAME, AM_WORKDIR, amConfig);
 }
 
 /*
@@ -125,12 +124,12 @@ int main(int argc, char *argv[]) {
             return 0;
         }
         else if (c == 'v') {
-            printf("%s\n", DD_VERSION);
+            printf("%s\n", AM_VERSION);
             return 0;
         }
         else if (c == 301) start = 1;
         else if (c == 302) stop = 1;
-        else if (c == 303) opt.arg? (watchDir = opt.arg) : (watchDir = DD_DEFAULT_WATCH_DIR);
+        else if (c == 303) opt.arg? (watchDir = opt.arg) : (watchDir = AM_DEFAULT_WATCH_DIR);
         else if (c == 'u') printf("unused flag:  -u %s\n", opt.arg);
         else if (c == '?') {
             fprintf(stderr, "unknown flag: -%c\n\n", opt.opt? opt.opt : ':');
@@ -153,30 +152,30 @@ int main(int argc, char *argv[]) {
 
     // set up the log
     char logName[128];
-    snprintf(logName, sizeof logName, "%s%s%s", DD_PROG_NAME, "-", getTimestamp());
+    snprintf(logName, sizeof logName, "%s%s%s", AM_PROG_NAME, "-", getTimestamp());
     slog_init(logName, "log/slog.cfg", 4, 1);
-    slog(0, SLOG_INFO, "starting antman (version: %s)", DD_VERSION);
+    slog(0, SLOG_INFO, "starting antman (version: %s)", AM_VERSION);
 
     // all good so far, now make sure the config file exists and can be written to
     slog(0, SLOG_INFO, "loading the config file...");
-    slog(0, SLOG_INFO, "\t- registered location: %s", DD_CONFIG);
-    if (access(DD_CONFIG, F_OK) == -1) {
+    slog(0, SLOG_INFO, "\t- registered location: %s", AM_CONFIG);
+    if (access(AM_CONFIG, F_OK) == -1) {
         slog(0, SLOG_WARN, "\t- config file doesn't exist");
         slog(0, SLOG_INFO, "\t- creating a new config file");
         Config *tmp = initConfig();
-        if (writeConfig(tmp, DD_CONFIG) != 0 ) {
+        if (writeConfig(tmp, AM_CONFIG) != 0 ) {
             slog(0, SLOG_ERROR, "\t- failed to create a new config file");
             exit(1);
         }
         destroyConfig(tmp);
     }
-    if (access(DD_CONFIG, W_OK) == -1) {
+    if (access(AM_CONFIG, W_OK) == -1) {
         slog(0, SLOG_ERROR, "\t- no write access to the config file");
         return 1;
     }
-    Config *ddconfig = initConfig();
-    if (loadConfig(ddconfig, DD_CONFIG) != 0) {
-        destroyConfig(ddconfig);
+    Config *amConfig = initConfig();
+    if (loadConfig(amConfig, AM_CONFIG) != 0) {
+        destroyConfig(amConfig);
         slog(0, SLOG_ERROR, "\t- could not load config file, may be corrupted");
         return 1;
     }
@@ -184,25 +183,27 @@ int main(int argc, char *argv[]) {
 
     // handle any stop request
     if (stop == 1) {
-        if (stopantman(ddconfig) != 0) exit(1);
+        if (stopAntman(amConfig) != 0) exit(1);
     }
 
     // handle any setWatchDir request
     if (watchDir[0] != '\0') {
 
         // if the daemon is already running, stop it, update the watch dir, then start the daemon again
-        if (ddconfig->running) {
-            if (stopantman(ddconfig) != 0) exit(1);
-            if (setantman(ddconfig, watchDir) != 0) exit(1);
-            startantman(ddconfig, logName);
+        if (amConfig->running) {
+            if (stopAntman(amConfig) != 0) exit(1);
+            if (setAntman(amConfig, watchDir) != 0) exit(1);
+            if (startAntman(amConfig, logName) != 0) {
+                return 1;
+            }
         } else {
-            if (setantman(ddconfig, watchDir) != 0) exit(1);
+            if (setAntman(amConfig, watchDir) != 0) exit(1);
         }
     }
 
     // handle any start request
     if (start == 1) {
-        startantman(ddconfig, logName);
+        startAntman(amConfig, logName);
     }
     slog(0, SLOG_INFO, "donzo.");
     return 0;

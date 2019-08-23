@@ -2,49 +2,44 @@
 #include <stdbool.h> 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>   // contains fork(3), chdir(3), sysconf(3)
 #include <signal.h>   //contains signal(3)
 #include <sys/stat.h> // contains umask(3)
+//#include <string.h> // contains memset
 
 #include "daemonize.h"
 #include "watcher.h"
+
+#include "workerpool.h"
 #include "../log/slog.h"
 
-// launchWatcher is used to start watching the specified directory
-void *launchWatcher(void* ddconfig) {
+const int NUM_THREADS = 4;
 
-    // cast the void pointer back to a config pointer
-    Config* config;
-    config = (Config*)ddconfig;
 
-    // setup the watcher and start it going
-    slog(0, SLOG_INFO, "\t- starting directory watcher on a new thread");
-    if (setupWatcher(config->watchDir) != 0) {
-        slog(0, SLOG_ERROR, "failed to launch watcher");
-        exit(1);
-    }
-   pthread_exit(NULL);
+// sigTermHandler is called in the event of a SIGTERM signal
+void sigTermHandler(int signum, siginfo_t* info, void* arg)
+{
+    slog(0, SLOG_INFO, "sigterm received, shutting down the antman daemon...");
+    
+    // TODO: shut down the workers, clean up worker pool, check for errors
+
+    slog(0, SLOG_INFO, "donzo.");
+    exit(0);
 }
 
-// miscWorker is a test function to help make sure I have got the hang of c threads!
-void *miscWorker(void *threadid) {
-    long tid;
-    tid = (long)threadid;
-    slog(0, SLOG_INFO, "\t- thread 2 (id %d) is being used to make sure the watcher isn't blocking antman", tid);
-
-    int ttl=100;
-    int delay=2;
-    while( ttl>0 ) {
-        sleep(delay);
-        //slog(0, SLOG_INFO, "\t- daemon ttl %d", ttl);
-        ttl-=delay;
-    }
-    slog(0, SLOG_INFO, "finished work on thread 2, closing it down");
-    pthread_exit(NULL);
+// catchSigterm is used to gracefully exit the daemon when `antman --stop` is called
+void catchSigterm()
+{
+    static struct sigaction _sigact;
+    memset(&_sigact, 0, sizeof(_sigact));
+    _sigact.sa_sigaction = sigTermHandler;
+    _sigact.sa_flags = SA_SIGINFO;
+    sigaction(SIGTERM, &_sigact, NULL);
 }
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
-void startDaemon(char* daemonName, char* wdir, Config* ddconfig) {
+int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
 
     // try daemonising the program
     int res;
@@ -67,30 +62,49 @@ void startDaemon(char* daemonName, char* wdir, Config* ddconfig) {
     slog(0, SLOG_INFO, "\t- daemon pid: %d", pid);
 
     // update the config with the PID TODO: this should probably be done in a lock file instead...
-    ddconfig->pid = pid;
-    ddconfig->running = true;
-    if (writeConfig(ddconfig, ddconfig->configFile) != 0 ) {
+    amConfig->pid = pid;
+    amConfig->running = true;
+    if (writeConfig(amConfig, amConfig->configFile) != 0 ) {
         slog(0, SLOG_ERROR, "failed to update config file");
         exit(1);
     }
 
-    // launch threads
-    slog(0, SLOG_INFO, "creating threads");
-    pthread_t threads[2];
-    int threadStatus;
-    threadStatus = pthread_create(&threads[0], NULL, launchWatcher, (void *)ddconfig);
-    if (threadStatus) {
-        slog(0, SLOG_ERROR, "could not create thread for the watcher");
-        exit(1);
-    }
-    threadStatus = pthread_create(&threads[1], NULL, miscWorker, (void *)1);
-    if (threadStatus) {
-        slog(0, SLOG_ERROR, "could not create thread for the watcher");
-        exit(1);
+    // launch the worker threads
+    tpool_t* wp;
+    wp = tpool_create(NUM_THREADS);
+    slog(0, SLOG_INFO, "\t- created workerpool of %d threads", NUM_THREADS);
+
+    // set up the signal catcher
+    catchSigterm();
+
+
+    // set up the directory watcher
+    const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
+    
+    // add the path(s) for the watcher to watch
+    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir)) {
+        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
+        return 1;
     }
 
-    pthread_exit(NULL);
-    return;
+    // set the watcher callback function
+    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
+        slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
+        return 1;
+    }
+    slog(0, SLOG_INFO, "\t- set up the directory watcher");
+
+    // start the watcher
+    if (FSW_OK != fsw_start_monitor(handle)) {
+        slog(0, SLOG_ERROR, "could not start the watcher");
+        return 1;
+    }
+
+
+    // TODO: the following will never be reached, so they need to be moved to the sigcatcher
+    tpool_wait(wp);
+    tpool_destroy(wp);
+    return 0;
 }
 
 // daemonize is used to fork, detach, fork again, change permissions, change directory and then reopen streams
