@@ -4,6 +4,6 @@
 /*
     function declarations
 */
-void justPrintMOFO(void *arg);
+void printFastq(char *filepath);
 
 #endif

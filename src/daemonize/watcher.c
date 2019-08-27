@@ -74,7 +74,7 @@ void watcherCallback(fsw_cevent const* const events, const unsigned int event_nu
         }
 
         // copy the filename to the workerpool queue
-        if (!tpool_add_work(wp, justPrintMOFO, (void *)events[i].path)) {
+        if (!tpool_add_work(wp, printFastq, events[i].path)) {
             slog(0, SLOG_ERROR, "\t- failed to send the file to the workerpool");
         }
 	}

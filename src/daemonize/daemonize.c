@@ -15,22 +15,16 @@
 #include "../log/slog.h"
 
 const int NUM_THREADS = 4;
-
+volatile sig_atomic_t done = 1;
 
 // sigTermHandler is called in the event of a SIGTERM signal
-void sigTermHandler(int signum, siginfo_t* info, void* arg)
-{
+void sigTermHandler(int signum, siginfo_t* info, void* arg) {
     slog(0, SLOG_INFO, "sigterm received, shutting down the antman daemon...");
-    
-    // TODO: shut down the workers, clean up worker pool, check for errors
-
-    slog(0, SLOG_INFO, "donzo.");
-    exit(0);
+    done = 0;
 }
 
 // catchSigterm is used to gracefully exit the daemon when `antman --stop` is called
-void catchSigterm()
-{
+void catchSigterm() {
     static struct sigaction _sigact;
     memset(&_sigact, 0, sizeof(_sigact));
     _sigact.sa_sigaction = sigTermHandler;
@@ -77,32 +71,42 @@ int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
     // set up the signal catcher
     catchSigterm();
 
+    // do work until the daemon is stopped by a SIGTERM
+    while (done)
+    {
 
-    // set up the directory watcher
-    const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
-    
-    // add the path(s) for the watcher to watch
-    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir)) {
-        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
-        return 1;
+        // set up the directory watcher
+        const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
+        
+        // add the path(s) for the watcher to watch
+        if (FSW_OK != fsw_add_path(handle, amConfig->watchDir)) {
+            slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
+            return 1;
+        }
+
+        // set the watcher callback function
+        if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
+            slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
+            return 1;
+        }
+        slog(0, SLOG_INFO, "\t- set up the directory watcher");
+
+        // start the watcher
+        /*
+            TODO: put the watcher inside a thread, so that it can be cancelled on signal
+        */
+
+        if (FSW_OK != fsw_start_monitor(handle)) {
+            slog(0, SLOG_ERROR, "could not start the watcher");
+            return 1;
+        }
     }
 
-    // set the watcher callback function
-    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
-        slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
-        return 1;
-    }
-    slog(0, SLOG_INFO, "\t- set up the directory watcher");
-
-    // start the watcher
-    if (FSW_OK != fsw_start_monitor(handle)) {
-        slog(0, SLOG_ERROR, "could not start the watcher");
-        return 1;
-    }
-
-
-    // TODO: the following will never be reached, so they need to be moved to the sigcatcher
-    tpool_wait(wp);
+    // clean up once the sigterm is received (which breaks the above while loop, stopping the watcher)
+    slog(0, SLOG_INFO, "\t- watcher stopped");
+    slog(0, SLOG_INFO, "\t- waiting for threads to finish");
+    tpool_wait(wp); // this will wait for threads to finish any work
+    slog(0, SLOG_INFO, "\t- cleaning up");
     tpool_destroy(wp);
     return 0;
 }
