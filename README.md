@@ -18,6 +18,14 @@ Next up, it will query/update a LIMS and kick of specific workflows.
 
 ## Install
 
+* depends on libfswatch, at the moment I'm just getting this with brew
+
+```bash
+brew install fswatch
+```
+
+* then just run the makefile
+
 ```bash
 make clean
 make test
