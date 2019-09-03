@@ -75,8 +75,8 @@ void watcherCallback(fsw_cevent const* const events, const unsigned int event_nu
         }
 
         // copy the filename to the workerpool queue
-        if (!tpool_add_work(wp, printFastq, events[i].path)) {
-            slog(0, SLOG_ERROR, "\t- failed to send the file to the workerpool");
+        if (!tpool_add_work(wp, sketchFastq, events[i].path)) {
+            slog(0, SLOG_ERROR, "\t- failed to send the filepath to the workerpool");
         }
 	}
 }

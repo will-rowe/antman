@@ -2,8 +2,8 @@
 #define FASTQ_H
 
 /*
-    function declarations
+    function prototypes
 */
-void printFastq(void* arg);
+void sketchFastq(void* arg);
 
 #endif

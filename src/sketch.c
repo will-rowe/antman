@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-
 #include "hashmap.h"
 #include "heap.h"
+#include "slog.h"
 
 unsigned char seq_nt4_table[256] = {
 	0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
@@ -123,11 +123,13 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 
 	// tmp print loop
 	printf("sketched read:\n");
+	slog(0, SLOG_INFO, "sketched read");
 	int tmp;
 	for (tmp = 0; tmp < sketchSize; tmp++) {
-		printf("%llu ", sketchValues[tmp]);
+		slog(0, SLOG_INFO, "%llu", sketchValues[tmp]);
+		//printf("%llu ", sketchValues[tmp]);
 	}
-	printf("\n");
+	//printf("\n");
 	free(sketchValues);
 
 	// finally, free the guff
