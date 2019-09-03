@@ -5,11 +5,11 @@
 #include <dirent.h>
 #include <errno.h>
 
-#include "cli/ketopt.h"
-#include "config/config.h"
-#include "daemonize/daemonize.h"
-#include "log/slog.h"
-#include "log/helpers.h"
+#include "ketopt.h"
+#include "config.h"
+#include "daemonize.h"
+#include "slog.h"
+#include "helpers.h"
 
 #define AM_PROG_NAME "antman"
 #define AM_VERSION "0.0.1"

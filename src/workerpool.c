@@ -3,7 +3,7 @@
 
 #include "workerpool.h"
 
-#include "../log/slog.h"
+#include "slog.h"
 
 /*
     the worker pool is a simple linked list which stores the function to call and its arguments

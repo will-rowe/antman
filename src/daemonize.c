@@ -10,9 +10,8 @@
 
 #include "daemonize.h"
 #include "watcher.h"
-
 #include "workerpool.h"
-#include "../log/slog.h"
+#include "slog.h"
 
 const int NUM_THREADS = 4;
 volatile sig_atomic_t done = 1;

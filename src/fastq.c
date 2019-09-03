@@ -1,11 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../log/slog.h"
+#include "slog.h"
 #include "kseq.h"
+
+
+#include <zlib.h>
+
+
+KSEQ_INIT(gzFile, gzread)
+void printFastq(char *filepath) {
+  gzFile fp;
+  kseq_t *seq;
+  int l;
+
+  fp = gzopen(filepath, "r");
+  seq = kseq_init(fp);
+  while ((l = kseq_read(seq)) >= 0) {
+    slog(0, SLOG_INFO, "name: %s\n", seq->name.s);
+    //if (seq->comment.l) printf("comment: %s\n", seq->comment.s);
+    slog(0, SLOG_INFO, "seq: %s\n", seq->seq.s);
+    //if (seq->qual.l) printf("qual: %s\n", seq->qual.s);
+  }
+  slog(0, SLOG_INFO, "return value: %d\n", l);
+  kseq_destroy(seq);
+  gzclose(fp);
+  return;
+
+}
+
+
+/*
+
+get canonical k-mer and hash
+if sketch isn't full, add
+if hash < biggest minimum in sketch AND hash not already in sketch, add
+
+update hash table which is tracking contents of the kmv sketch
+
+
+when read is sketched, check each minimum against a bloom filter of the reference k-mers
+
+
+*/
+
+
+/*
 KSEQ_INIT(FILE*, read)
-
-
 
 // printFastq
 void printFastq(char *filepath) {
@@ -51,3 +92,4 @@ void printFastq(char *filepath) {
     kseq_destroy(seq);
 	fclose(fp);
 }
+*/

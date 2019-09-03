@@ -24,6 +24,8 @@ test:
 	@echo "Running unit tests..."
 	@echo " - compiling tests"
 	@$(CC) $(TEST)/config_test.c -o $(TEST)/_test_config
+	@$(CC) $(TEST)/heap_test.c -o $(TEST)/_test_heap
+	@$(CC) $(TEST)/sketch_test.c -o $(TEST)/_test_sketch
 	@echo " - launching test runner"
 	@cd $(TEST) && ./run_unit_tests.sh
 	@echo " - cleaning up"
@@ -37,7 +39,7 @@ clean:
 
 # Build binary
 $(EXECUTABLE_FILES): $(OBJECT_FILES)
-	@$(CC) $(LDFLAGS) -o $@ $^ $(LIBFSWATCH) -lpthread
+	@$(CC) $(LDFLAGS) -o $@ $^ $(LIBFSWATCH) -lpthread -lz
 	@echo "Build successful!"
 
 # Objects depend on these Libraries

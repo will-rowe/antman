@@ -2,8 +2,8 @@
 
 #include "watcher.h"
 #include "workerpool.h"
-#include "../fastq/fastq.h"
-#include "../log/slog.h"
+#include "fastq.h"
+#include "slog.h"
 
 // getExt takes a filename and returns the extension
 char* getExt(const char *filename) {
@@ -51,6 +51,7 @@ void watcherCallback(fsw_cevent const* const events, const unsigned int event_nu
         char* ext = getExt(e->path);
         if ((strcmp(ext, "fastq") == 0) || (strcmp(ext, "fq") == 0 )) {
             slog(0, SLOG_INFO, "found a FASTQ file");
+            slog(0, SLOG_INFO, "\t- filepath: %s", e->path);
         }  else {
             continue;
         }
@@ -63,7 +64,7 @@ void watcherCallback(fsw_cevent const* const events, const unsigned int event_nu
 
         // use the bitmask to determine how to handle the event
         if ((setFlags & fileCheckList) == fileCheckList) {
-            slog(0, SLOG_INFO, "\t- filepath: %s", e->path);
+            slog(0, SLOG_INFO, "\t- looks good so sending on to workerpool");
         } else {
             if ((setFlags & 1 << 3) == 1 << 3) {
                 slog(0, SLOG_INFO, "\t- turns out it was a file being deleted, not created");

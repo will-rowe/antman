@@ -1,7 +1,7 @@
 #ifndef DAEMONIZE_H
 #define DAEMONIZE_H
 
-#include "../config/config.h"
+#include "config.h"
 
 /*
     function declarations

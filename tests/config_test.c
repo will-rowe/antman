@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../src/config/config.c"
-#include "../src/config/frozen.c"
+#include "../src/config.c"
+#include "../src/frozen.c"
 
 #define AM_CONFIG "./tmp.config"
 #define ERR_initConf1 "could not init a config instance"
@@ -55,11 +55,14 @@ static char* all_tests() {
   entrypoint
 */
 int main(int argc, char **argv) {
-  fprintf(stderr, "\ntesting unit...\n\n");
+  fprintf(stderr, "\t\tconfig_test...");
   char *result = all_tests();
   if (result != 0) {
+    fprintf(stderr, "failed\n");
     fprintf(stderr, "\ntest function %d failed:\n", tests_run);
     fprintf(stderr, "%s\n", result);
+  } else {
+    fprintf(stderr, "passed\n");
   }
   return result != 0;
 }
