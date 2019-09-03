@@ -4,6 +4,6 @@
 /*
     function declarations
 */
-void printFastq(char *filepath);
+void printFastq(void* arg);
 
 #endif

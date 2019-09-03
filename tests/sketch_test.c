@@ -64,9 +64,10 @@ static char* test_hashmap() {
   test the read sketching
 */
 static char* test_sketchRead() {
-
   char* read = "actgactgactg";
   sketchRead(read, 12, 3, 4);
+
+  // TODO: validate the sketch
 
   return 0;
 }

@@ -40,7 +40,8 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 	return key;
 }
 
-// sketchRead
+// sketchRead takes the read sequence, the sequence length, the k-mer size and the sketch size
+// it generates a MinHash KMV sketch of the read
 void sketchRead(const char *str, int len, int k, int sketchSize) {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,
@@ -121,6 +122,7 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 
 
 	// tmp print loop
+	printf("sketched read:\n");
 	int tmp;
 	for (tmp = 0; tmp < sketchSize; tmp++) {
 		printf("%llu ", sketchValues[tmp]);

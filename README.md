@@ -39,3 +39,7 @@ antman -start
 antman -stop
 antman -setWatchDir /path/to/some/dir
 ```
+
+## TODO
+
+* at the moment, it just uses the log file for tracking active PID - it needs to actually check these in case the log file becomes corrupted

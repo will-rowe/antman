@@ -6,30 +6,42 @@
 #include <unistd.h>   // contains fork(3), chdir(3), sysconf(3)
 #include <signal.h>   //contains signal(3)
 #include <sys/stat.h> // contains umask(3)
-//#include <string.h> // contains memset
 
 #include "daemonize.h"
 #include "watcher.h"
 #include "workerpool.h"
 #include "slog.h"
 
-const int NUM_THREADS = 4;
-volatile sig_atomic_t done = 1;
+const int NUM_THREADS = 4; // TODO: this will be set be user
+
+volatile sig_atomic_t done = 0;
 
 // sigTermHandler is called in the event of a SIGTERM signal
-void sigTermHandler(int signum, siginfo_t* info, void* arg) {
+void sigTermHandler(int signum) {
     slog(0, SLOG_INFO, "sigterm received, shutting down the antman daemon...");
-    done = 0;
+    done = 1;
 }
 
-// catchSigterm is used to gracefully exit the daemon when `antman --stop` is called
+// catchSigterm is used to exit the daemon when `antman --stop` is called
 void catchSigterm() {
-    static struct sigaction _sigact;
-    memset(&_sigact, 0, sizeof(_sigact));
-    _sigact.sa_sigaction = sigTermHandler;
-    _sigact.sa_flags = SA_SIGINFO;
-    sigaction(SIGTERM, &_sigact, NULL);
+    static struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = sigTermHandler;
+    sigaction(SIGTERM, &action, NULL);
 }
+
+//
+void *startWatching(void *param) {
+  FSW_HANDLE *handle = (FSW_HANDLE *) param;
+  if (FSW_OK != fsw_start_monitor(*handle)) {
+    slog(0, SLOG_ERROR, "error creating thread for directory watcher");
+    exit(1);
+  } else {
+    slog(0, SLOG_INFO, "\t- stopped the directory watcher");
+  }
+  return NULL;
+}
+
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
 int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
@@ -54,7 +66,8 @@ int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
     pid_t pid = getpid();
     slog(0, SLOG_INFO, "\t- daemon pid: %d", pid);
 
-    // update the config with the PID TODO: this should probably be done in a lock file instead...
+    // update the config with the PID
+    // TODO: this should probably be done in a lock file instead...
     amConfig->pid = pid;
     amConfig->running = true;
     if (writeConfig(amConfig, amConfig->configFile) != 0 ) {
@@ -70,43 +83,61 @@ int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
     // set up the signal catcher
     catchSigterm();
 
-    // do work until the daemon is stopped by a SIGTERM
-    while (done)
-    {
+    // set up the watcher
+    if (FSW_OK != fsw_init_library()) {
+        slog(0, SLOG_INFO, "%s", fsw_last_error());
+        slog(0, SLOG_ERROR, "fswatch cannot be initialised");
+    }
+    const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
 
-        // set up the directory watcher
-        const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
-        
-        // add the path(s) for the watcher to watch
-        if (FSW_OK != fsw_add_path(handle, amConfig->watchDir)) {
-            slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
-            return 1;
-        }
+    // add the path(s) for the watcher to watch
+    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir)) {
+        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
+        exit(1);
+    }
+    slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watchDir);
 
-        // set the watcher callback function
-        if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
-            slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
-            return 1;
-        }
-        slog(0, SLOG_INFO, "\t- set up the directory watcher");
-
-        // start the watcher
-        /*
-            TODO: put the watcher inside a thread, so that it can be cancelled on signal
-        */
-
-        if (FSW_OK != fsw_start_monitor(handle)) {
-            slog(0, SLOG_ERROR, "could not start the watcher");
-            return 1;
-        }
+    // set the watcher callback function
+    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
+        slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
+        exit(1);
     }
 
-    // clean up once the sigterm is received (which breaks the above while loop, stopping the watcher)
-    slog(0, SLOG_INFO, "\t- watcher stopped");
-    slog(0, SLOG_INFO, "\t- waiting for threads to finish");
-    tpool_wait(wp); // this will wait for threads to finish any work
-    slog(0, SLOG_INFO, "\t- cleaning up");
+    // start the watcher on a new thread
+    pthread_t start_thread;
+    if (pthread_create(&start_thread, NULL, startWatching, (void *) &handle)) {
+        slog(0, SLOG_ERROR, "could not start the watcher thread");
+        exit(1);
+    }
+
+    // run antman until a stop signal is received
+    while (!done) {
+        pause ();
+    }
+
+    // stop the directory watcher
+    if (FSW_OK != fsw_stop_monitor(handle)) {
+        slog(0, SLOG_ERROR, "error stopping the directory watcher");
+        exit(1);
+    }
+    sleep(5);
+    if (FSW_OK != fsw_destroy_session(handle)) {
+        slog(0, SLOG_ERROR, "error destroying the fswatch session");
+        exit(1);
+    }
+
+    // wait for the directory watcher thread to finish
+    if (pthread_join(start_thread, NULL)) {
+        slog(0, SLOG_ERROR, "error joining directory watcher thread");
+        exit(1);
+    }
+
+    // wait on any active threads in the workerpool
+    tpool_wait(wp);    
+
+    // destroy the workerpool
     tpool_destroy(wp);
+    slog(0, SLOG_INFO, "\t- stopped the worker threads");
     return 0;
 }
 
