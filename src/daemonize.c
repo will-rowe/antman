@@ -13,7 +13,6 @@
 #include "slog.h"
 
 const int NUM_THREADS = 4; // TODO: this will be set be user
-
 volatile sig_atomic_t done = 0;
 
 // sigTermHandler is called in the event of a SIGTERM signal
@@ -30,8 +29,8 @@ void catchSigterm() {
     sigaction(SIGTERM, &action, NULL);
 }
 
-//
-void *startWatching(void *param) {
+// startWatching is used to start the directory watcher inside a thread
+void* startWatching(void *param) {
   FSW_HANDLE *handle = (FSW_HANDLE *) param;
   if (FSW_OK != fsw_start_monitor(*handle)) {
     slog(0, SLOG_ERROR, "error creating thread for directory watcher");
