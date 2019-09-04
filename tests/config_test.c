@@ -24,7 +24,7 @@ int tests_run = 0;
 static char* test_initConf() {
 
   // create a config
-  Config *tmp = initConfig();
+  config_t *tmp = initConfig();
   tmp->pid = 666;
   if (tmp == 0) return ERR_initConf1;
 
@@ -32,7 +32,7 @@ static char* test_initConf() {
   if (writeConfig(tmp, AM_CONFIG) != 0 ) return ERR_initConf2;
 
   // try loading from file
-  Config *tmp2 = initConfig();
+  config_t *tmp2 = initConfig();
   if (loadConfig(tmp2, AM_CONFIG) != 0) return ERR_initConf3;
   if (tmp->pid != tmp2->pid) return ERR_initConf4;
 

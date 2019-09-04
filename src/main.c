@@ -33,7 +33,7 @@ void printUsage(void) {
 /*
    stopAntman
 */
-int stopAntman(Config* amConfig) {
+int stopAntman(config_t* amConfig) {
     if (!amConfig->running) {
         slog(0, SLOG_WARN, "daemon is already stopped, ignoring stop request");
     } else {
@@ -57,7 +57,7 @@ int stopAntman(Config* amConfig) {
 /*
    setAntman is used to set the watch directory
 */
-int setAntman(Config* amConfig, char* dirName) {
+int setAntman(config_t* amConfig, char* dirName) {
     slog(0, SLOG_INFO, "setting the watch directory...");
 
     // check directory exists and is accessible
@@ -85,7 +85,7 @@ int setAntman(Config* amConfig, char* dirName) {
 /*
    startAntman
 */
-int startAntman(Config* amConfig, char* logName) {
+int startAntman(config_t* amConfig, char* logName) {
     if (amConfig->running) {
         slog(0, SLOG_WARN, "daemon is already running, ignoring start request");
         slog(0, SLOG_INFO, "\t- daemon PID: %d", amConfig->pid);
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
     if (access(AM_CONFIG, F_OK) == -1) {
         slog(0, SLOG_WARN, "\t- config file doesn't exist");
         slog(0, SLOG_INFO, "\t- creating a new config file");
-        Config *tmp = initConfig();
+        config_t *tmp = initConfig();
         if (writeConfig(tmp, AM_CONFIG) != 0 ) {
             slog(0, SLOG_ERROR, "\t- failed to create a new config file");
             exit(1);
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
         slog(0, SLOG_ERROR, "\t- no write access to the config file");
         return 1;
     }
-    Config *amConfig = initConfig();
+    config_t *amConfig = initConfig();
     if (loadConfig(amConfig, AM_CONFIG) != 0) {
         destroyConfig(amConfig);
         slog(0, SLOG_ERROR, "\t- could not load config file, may be corrupted");

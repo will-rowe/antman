@@ -2,34 +2,40 @@
 #include <stdlib.h> 
 #include "heap.h"
 
+// node is the building block for the heap
+struct node { 
+    struct node* next; 
+    uint64_t minimum; // the hashed k-mer
+};
+
 // initHeap creates a new node in the heap 
-Node* initHeap(uint64_t minimum) { 
-    Node* tmp = (Node*)malloc(sizeof(Node)); 
+node_t* initHeap(uint64_t minimum) { 
+    node_t* tmp = (node_t*)malloc(sizeof(node_t)); 
     tmp->next = NULL; 
     tmp->minimum = minimum; 
     return tmp; 
 } 
   
 // peek will return the largest minimum currently in the heap
-uint64_t peek(Node** head) {
+uint64_t peek(node_t** head) {
     return (*head)->minimum; 
 }
   
 // pop will remove the largest minimum currently in the heap and return it
-void pop(Node** head) {
-    Node* tmp = *head; 
+void pop(node_t** head) {
+    node_t* tmp = *head; 
     (*head) = (*head)->next; 
     free(tmp); 
 } 
   
 // push will add a minimum to the heap 
-void push(Node** head, uint64_t minimum) {
+void push(node_t** head, uint64_t minimum) {
 
     // create a new node for the incoming minimum 
-    Node* tmp = initHeap(minimum); 
+    node_t* tmp = initHeap(minimum); 
 
     // start with the largest minimum already in the heap
-    Node* start = (*head); 
+    node_t* start = (*head); 
 
     // if the new minimum > the start node, add it at the top of the heap and change the head node 
     if ((*head)->minimum < minimum) {
@@ -49,12 +55,12 @@ void push(Node** head, uint64_t minimum) {
 
 // getSketch will return the heap values, from top to bottom (largest to smallest)
 // if heap < numValues, the remainder will be 0s
-uint64_t* getSketch(Node** head, int numValues) {
+uint64_t* getSketch(node_t** head, int numValues) {
     uint64_t *returnValues = calloc(numValues, sizeof(uint64_t));
     if(!returnValues) {
         return NULL;
     }
-    Node* start = (*head);
+    node_t* start = (*head);
     int i = 0;
     while(start->next != NULL) {
         returnValues[i] = start->minimum;
@@ -67,13 +73,13 @@ uint64_t* getSketch(Node** head, int numValues) {
 }
 
 // isEmpty checks if the heap is empty
-bool isEmpty(Node** head) {
+bool isEmpty(node_t** head) {
     return (*head) == NULL; 
 }
 
 // destroy will free the heap
-void destroy(Node** head) {
-    Node *tmp;
+void destroy(node_t** head) {
+    node_t *tmp;
 
     // set the tmp node to head and stop the traversal if the list is empty
     while ((tmp = *head) != NULL) { 

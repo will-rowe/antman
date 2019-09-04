@@ -6,6 +6,11 @@
 
 kmer* hashArray[HASHMAP_SIZE];
 
+// kmer
+struct kmer { 
+   uint64_t kmerHash;
+};
+
 // hmInsert a hashed k-mer into the hashmap
 // returns true if inserted, false if not
 bool hmInsert(uint64_t kmerHash) {

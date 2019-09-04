@@ -57,7 +57,7 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 	int i , l, kmer_span = 0;
 
     // set up the heap for the sketch
-    Node* kmvSketch;
+    node_t* kmvSketch;
 	int currentHeapSize = 0;
 
     // iterate over the sequence

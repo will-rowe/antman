@@ -21,7 +21,7 @@ int tests_run = 0;
 static char* test_initHeap() {
 
   // create a heap with one minimum
-  Node* testHeap;
+  node_t* testHeap;
   uint64_t minimum = 1234;
   testHeap = initHeap(minimum);
 
@@ -49,7 +49,7 @@ static char* test_initHeap() {
 */
 static char* test_minHeap() {
   uint64_t valA = 1234, valB = 1, valC = 42;
-  Node* testHeap = initHeap(valA);
+  node_t* testHeap = initHeap(valA);
   push(&testHeap, valB);
   push(&testHeap, valC);
 

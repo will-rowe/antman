@@ -5,20 +5,17 @@
 
 #define AM_DEFAULT_WATCH_DIR "/var/lib/MinKNOW/data/reads"
 
-// Config is the struct containing config information
-typedef struct Config {
-    char *configFile;
-    char *watchDir;
-    int pid;
-    bool running;
-} Config;
+/*
+    config_t is used to record the minimum information required by antman
+*/
+typedef struct config config_t; 
 
 /*
     function declarations
 */
-Config* initConfig();
-void destroyConfig(Config* config);
-int writeConfig(Config* config, char* configFile);
-int loadConfig(Config* config, char* configFile);
+config_t* initConfig();
+void destroyConfig(config_t* config);
+int writeConfig(config_t* config, char* configFile);
+int loadConfig(config_t* config, char* configFile);
 
 #endif

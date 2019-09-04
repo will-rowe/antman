@@ -43,7 +43,7 @@ void* startWatching(void *param) {
 
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
-int startDaemon(char* daemonName, char* wdir, Config* amConfig) {
+int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
 
     // try daemonising the program
     int res;

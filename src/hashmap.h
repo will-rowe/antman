@@ -6,9 +6,8 @@
 
 #define HASHMAP_SIZE 256
 
-typedef struct kmer { 
-   uint64_t kmerHash;
-} kmer;
+//
+typedef struct kmer kmer;
 
 /*
     function prototypes

@@ -4,9 +4,17 @@
 #include "config.h"
 #include "frozen.h"
 
+// config contains the minimum information required by antman
+struct config {
+    char* configFile;
+    char* watchDir;
+    int pid;
+    bool running;
+};
+
 // initConfig
-Config* initConfig() {
-    Config* c;
+config_t* initConfig() {
+    config_t* c;
     if ((c = malloc(sizeof *c)) != NULL) {
         c->configFile = "";
         c->watchDir = AM_DEFAULT_WATCH_DIR;
@@ -17,13 +25,13 @@ Config* initConfig() {
 }
 
 // destroyConfig
-void destroyConfig(Config *config) {
+void destroyConfig(config_t* config) {
     free(config);
     config = NULL;
 }
 
 // writeConfig
-int writeConfig(Config* config, char* configFile) {
+int writeConfig(config_t* config, char* configFile) {
 
     // make sure the config is populated with something
     if (config == 0) return 1;
@@ -40,10 +48,10 @@ int writeConfig(Config* config, char* configFile) {
 }
 
 // loadConfig
-int loadConfig(Config* config, char* configFile) {
+int loadConfig(config_t* config, char* configFile) {
 
     // create a stack allocated tmp config
-    Config c = { .pid = -1, .watchDir = NULL };
+    config_t c = { .pid = -1, .watchDir = NULL };
 
     // read the file into a buffer
     char* content = json_fread(configFile);
