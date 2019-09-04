@@ -13,7 +13,7 @@
 
 #define AM_PROG_NAME "antman"
 #define AM_VERSION "0.0.1"
-#define AM_CONFIG "/Users/willrowe/Google Drive/code/c/projects/antman/.antman.config"
+#define AM_CONFIG "/Users/willrowe/Google Drive/code/c/projects/antman/.antman.config" // location of config file
 #define AM_WORKDIR "/Users/willrowe/Google Drive/code/c/projects/antman" // working directory for the daemon
 
 /*

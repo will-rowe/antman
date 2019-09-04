@@ -7,12 +7,17 @@
 #include <signal.h>   //contains signal(3)
 #include <sys/stat.h> // contains umask(3)
 
+#include "bloom.h"
 #include "daemonize.h"
 #include "watcher.h"
 #include "workerpool.h"
 #include "slog.h"
 
-const int NUM_THREADS = 4; // TODO: this will be set be user
+// TODO: set these values by the cli
+const int NUM_THREADS = 4;
+const double FP_RATE = 0.01;
+const int NUM_ELEMENTS = 100000;
+
 volatile sig_atomic_t done = 0;
 
 // sigTermHandler is called in the event of a SIGTERM signal
@@ -44,6 +49,11 @@ void* startWatching(void *param) {
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
 int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
+
+    // create a bloom filter for the reference sequence
+    //struct bloom bf;
+    //bloom_init(&bf, NUM_ELEMENTS, FP_RATE);
+
 
     // try daemonising the program
     int res;

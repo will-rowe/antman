@@ -80,18 +80,6 @@ static char* test_hashmap() {
 }
 
 /*
-  test the read sketching
-*/
-static char* test_sketchRead() {
-  char* read = "actgactgactg";
-  sketchRead(read, 12, 3, 4);
-
-  // TODO: validate the sketch
-
-  return 0;
-}
-
-/*
   test the bloom filter
 */
 static char* test_bloomfilter() {
@@ -111,6 +99,23 @@ static char* test_bloomfilter() {
   if (bloom_check(&bloom, testString2, testStringLen)) {
     return ERR_bloomfilter3;
   }
+
+  bloom_free(&bloom);
+  return 0;
+}
+
+/*
+  test the sequence sketching
+*/
+static char* test_sketchRead() {
+  struct bloom bloom;
+  bloom_init(&bloom, 1000000, 0.01);
+
+  char* read = "actgactgactg";
+  sketchRead(read, 12, 3, 4);
+
+  // TODO: validate the sketch
+
 
   bloom_free(&bloom);
   return 0;

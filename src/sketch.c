@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "bloom.h"
 #include "hashmap.h"
 #include "heap.h"
 #include "slog.h"
@@ -40,8 +41,10 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 	return key;
 }
 
-// sketchRead takes the read sequence, the sequence length, the k-mer size and the sketch size
+// sketchRead takes the read sequence, the sequence length, the k-mer size, the sketch size and a pointer to a bloom filter
 // it generates a MinHash KMV sketch of the read
+// it also populates the bloom filter with hashed k-mers
+// TODO: decide how to return the sketch
 void sketchRead(const char *str, int len, int k, int sketchSize) {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,

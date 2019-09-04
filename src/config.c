@@ -1,16 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "config.h"
 #include "frozen.h"
-
-// config contains the minimum information required by antman
-struct config {
-    char* configFile;
-    char* watchDir;
-    int pid;
-    bool running;
-};
+#include "config.h"
 
 // initConfig
 config_t* initConfig() {

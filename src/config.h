@@ -8,7 +8,12 @@
 /*
     config_t is used to record the minimum information required by antman
 */
-typedef struct config config_t; 
+typedef struct config {
+    char* configFile;
+    char* watchDir;
+    int pid;
+    bool running;
+} config_t;
 
 /*
     function declarations

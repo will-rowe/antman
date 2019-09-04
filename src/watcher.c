@@ -15,11 +15,11 @@ char* getExt(const char *filename) {
 }
 
 // watcherCallback is a test callback function for when the watcher spots a change
-void watcherCallback(fsw_cevent const* const events, const unsigned int event_num, void* workerPool) {
+void watcherCallback(fsw_cevent const* const events, const unsigned int event_num, void* args) {
 
     // get the workerpool ready to process an event
     tpool_t* wp;
-    wp = (tpool_t*)workerPool; 
+    wp = (tpool_t*)args; 
 
     // set the flags from libfswatch that we want to check events against
     int fileCheckList = Created | IsFile;
