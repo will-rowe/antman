@@ -20,6 +20,8 @@
 #define ERR_bloomfilter1 "bf should read false for any check when no elements have been added yet"
 #define ERR_bloomfilter2 "bf should not produce false negatives"
 #define ERR_bloomfilter3 "bf has returned a false positive (which does happen...)"
+#define ERR_sketch1 "bf did not return k-mer known to be in the sequence (fn)"
+#define ERR_sketch2 "bf returned k-mer known to not be in the sequence (fp)"
 
 int tests_run = 0;
 
@@ -99,7 +101,6 @@ static char* test_bloomfilter() {
   if (bloom_check(&bloom, testString2, testStringLen)) {
     return ERR_bloomfilter3;
   }
-
   bloom_free(&bloom);
   return 0;
 }
@@ -107,12 +108,26 @@ static char* test_bloomfilter() {
 /*
   test the sequence sketching
 */
-static char* test_sketchRead() {
+static char* test_sketchSeq() {
   struct bloom bloom;
   bloom_init(&bloom, 1000000, 0.01);
 
-  char* read = "actgactgactg";
-  sketchRead(read, 12, 3, 4);
+  // sketch a sequence
+  char* seq = "actgactgactg";
+  int seqLen = 12;
+  int kSize = 3;
+  int sketchSize = 4;
+  uint64_t hashedKmer = 14595;
+  uint64_t dummyHashedKmer = 14596;
+  sketchSequence(seq, seqLen, kSize, sketchSize, &bloom);
+
+  // confirm the bloom filter worked
+  if (!bloom_check(&bloom, &hashedKmer, kSize)) {
+    return ERR_sketch1;
+  }
+  if (bloom_check(&bloom, &dummyHashedKmer, kSize)) {
+    return ERR_sketch2;
+  }
 
   // TODO: validate the sketch
 
@@ -126,8 +141,8 @@ static char* test_sketchRead() {
 */
 static char* all_tests() {
   mu_run_test(test_hashmap);
-  mu_run_test(test_sketchRead);
   mu_run_test(test_bloomfilter);
+  mu_run_test(test_sketchSeq);
   return 0;
 }
 

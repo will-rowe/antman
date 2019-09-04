@@ -5,6 +5,6 @@
 /*
     function prototypes
 */
-void sketchRead(const char *str, int len, int k, int sketchSize);
+void sketchSequence(const char *str, int len, int k, int sketchSize);
 
 #endif

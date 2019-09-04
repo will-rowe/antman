@@ -51,8 +51,8 @@ void* startWatching(void *param) {
 int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
 
     // create a bloom filter for the reference sequence
-    //struct bloom bf;
-    //bloom_init(&bf, NUM_ELEMENTS, FP_RATE);
+    struct bloom bf;
+    bloom_init(&bf, NUM_ELEMENTS, FP_RATE);
 
 
     // try daemonising the program

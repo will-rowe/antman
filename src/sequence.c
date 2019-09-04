@@ -29,7 +29,7 @@ void sketchFastq(void* arg) {
         //if (seq->qual.l) printf("qual: %s\n", seq->qual.s);
 
         // sketch the read
-        sketchRead(seq->seq.s, l, K_SIZE, SKETCH_SIZE);
+        sketchSequence(seq->seq.s, l, K_SIZE, SKETCH_SIZE);
     }
     kseq_destroy(seq);
 

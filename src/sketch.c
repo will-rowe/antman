@@ -41,11 +41,11 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 	return key;
 }
 
-// sketchRead takes the read sequence, the sequence length, the k-mer size, the sketch size and a pointer to a bloom filter
-// it generates a MinHash KMV sketch of the read
+// sketchSequence takes a sequence, the sequence length, the k-mer size, the sketch size and a pointer to a bloom filter
+// it generates a MinHash KMV sketch of the sequence
 // it also populates the bloom filter with hashed k-mers
 // TODO: decide how to return the sketch
-void sketchRead(const char *str, int len, int k, int sketchSize) {
+void sketchSequence(const char *str, int len, int k, int sketchSize, struct bloom* bf) {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,
 	// either need checks to make sure this is correct
@@ -90,6 +90,9 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 		} else l = 0, kmer_span = 0;
         if (i < k) continue;
 
+		// add the hashed k-mer to the bloom filter
+		bloom_add(bf, &hashedKmer, k);
+
 		// now we have a hashed k-mer, first check if the sketch isn't at capacity yet
 		if (currentHeapSize < sketchSize) {
 
@@ -120,12 +123,12 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 		hmInsert(hashedKmer);
 	}
 
-	// the read has now been sketched
+	// the sequence has now been sketched
 	uint64_t* sketchValues = getSketch(&kmvSketch, sketchSize);
 
 
 	// tmp print loop
-	//printf("sketched read:\n");
+	//printf("sketched sequence:\n");
 	//int tmp;
 	//for (tmp = 0; tmp < sketchSize; tmp++) {
 		//printf("%llu ", sketchValues[tmp]);
