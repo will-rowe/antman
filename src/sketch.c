@@ -122,13 +122,11 @@ void sketchRead(const char *str, int len, int k, int sketchSize) {
 
 
 	// tmp print loop
-	printf("sketched read:\n");
-	slog(0, SLOG_INFO, "sketched read");
-	int tmp;
-	for (tmp = 0; tmp < sketchSize; tmp++) {
-		slog(0, SLOG_INFO, "%llu", sketchValues[tmp]);
+	//printf("sketched read:\n");
+	//int tmp;
+	//for (tmp = 0; tmp < sketchSize; tmp++) {
 		//printf("%llu ", sketchValues[tmp]);
-	}
+	//}
 	//printf("\n");
 	free(sketchValues);
 

@@ -7,9 +7,7 @@
 #include "minunit.h"
 #include "../src/sketch.c"
 #include "../src/hashmap.c"
-#include "../src/hashmap.h"
 #include "../src/heap.c"
-#include "../src/heap.h"
 
 #define ERR_sketchRead1 "could not sketch read"
 #define ERR_initHashMap1 "hashmap was overfilled"

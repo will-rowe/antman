@@ -2,7 +2,7 @@
 
 #include "watcher.h"
 #include "workerpool.h"
-#include "fastq.h"
+#include "sequence.h"
 #include "slog.h"
 
 // getExt takes a filename and returns the extension

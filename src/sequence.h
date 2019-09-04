@@ -1,5 +1,5 @@
-#ifndef FASTQ_H
-#define FASTQ_H
+#ifndef SEQUENCE_H
+#define SEQUENCE_H
 
 /*
     function prototypes
