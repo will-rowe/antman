@@ -1,6 +1,7 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include "heap.h"
+#include "slog.h"
 
 // node is the building block for the heap
 struct node { 
@@ -53,23 +54,20 @@ void push(node_t** head, uint64_t minimum) {
     }
 }
 
-// getSketch will return the heap values, from top to bottom (largest to smallest)
-// if heap < numValues, the remainder will be 0s
-uint64_t* getSketch(node_t** head, int numValues) {
-    uint64_t *returnValues = calloc(numValues, sizeof(uint64_t));
-    if(!returnValues) {
-        return NULL;
-    }
+// getSketch adds the heap values to an array, from top to bottom (largest to smallest)
+// it's the callers job to init and free the sketch
+void getSketch(node_t** head, int numValues, uint64_t* sketch) {
     node_t* start = (*head);
     int i = 0;
     while(start->next != NULL) {
-        returnValues[i] = start->minimum;
+        *(sketch + i) = start->minimum;
         start = start->next;
         i++;
     }
+
     // grab the final value and then return
-    returnValues[i] = start->minimum;
-    return returnValues;
+    *(sketch + i) = start->minimum;
+    return;
 }
 
 // isEmpty checks if the heap is empty

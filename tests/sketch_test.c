@@ -22,6 +22,7 @@
 #define ERR_bloomfilter3 "bf has returned a false positive (which does happen...)"
 #define ERR_sketch1 "bf did not return k-mer known to be in the sequence (fn)"
 #define ERR_sketch2 "bf returned k-mer known to not be in the sequence (fp)"
+#define ERR_alloc "could not allocate"
 
 int tests_run = 0;
 
@@ -119,7 +120,11 @@ static char* test_sketchSeq() {
   int sketchSize = 4;
   uint64_t hashedKmer = 14595;
   uint64_t dummyHashedKmer = 14596;
-  sketchSequence(seq, seqLen, kSize, sketchSize, &bloom);
+  uint64_t* sketch = calloc(3, sizeof(uint64_t));
+  if(!sketch) {
+    return ERR_alloc;
+  } 
+  sketchSequence(seq, seqLen, kSize, sketchSize, &bloom, sketch);
 
   // confirm the bloom filter worked
   if (!bloom_check(&bloom, &hashedKmer, kSize)) {
@@ -131,7 +136,7 @@ static char* test_sketchSeq() {
 
   // TODO: validate the sketch
 
-
+  free(sketch);
   bloom_free(&bloom);
   return 0;
 }

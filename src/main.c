@@ -11,10 +11,7 @@
 #include "slog.h"
 #include "helpers.h"
 
-#define AM_PROG_NAME "antman"
 #define AM_VERSION "0.0.1"
-#define AM_CONFIG "/Users/willrowe/Google Drive/code/c/projects/antman/.antman.config" // location of config file
-#define AM_WORKDIR "/Users/willrowe/Google Drive/code/c/projects/antman" // working directory for the daemon
 
 /*
    printUsage prints the usage info for antman
@@ -91,12 +88,11 @@ int startAntman(config_t* amConfig, char* logName) {
         slog(0, SLOG_INFO, "\t- daemon PID: %d", amConfig->pid);
         return 0;
     }
-    slog(0, SLOG_INFO, "starting the daemon...");
-    slog(0, SLOG_INFO, "\t- changing working directory to: %s", AM_WORKDIR);
-    slog(0, SLOG_INFO, "\t- redirecting antman log to file: %s/%s.log", AM_WORKDIR, logName);
+    slog(0, SLOG_INFO, "preparing antman...");
     slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watchDir);
-    slog(0, SLOG_INFO, "donzo.");
-    return startDaemon(AM_PROG_NAME, AM_WORKDIR, amConfig);
+    slog(0, SLOG_INFO, "\t- changing working directory to: %s", amConfig->workingDir);
+    slog(0, SLOG_INFO, "\t- redirecting antman log to file: %s/%s.log", amConfig->workingDir, logName);
+    return startDaemon(amConfig);
 }
 
 /*
@@ -158,23 +154,25 @@ int main(int argc, char *argv[]) {
 
     // all good so far, now make sure the config file exists and can be written to
     slog(0, SLOG_INFO, "loading the config file...");
-    slog(0, SLOG_INFO, "\t- registered location: %s", AM_CONFIG);
-    if (access(AM_CONFIG, F_OK) == -1) {
+    slog(0, SLOG_INFO, "\t- registered location: %s", AM_DEFAULT_CONFIG);
+    if (access(AM_DEFAULT_CONFIG, F_OK) == -1) {
         slog(0, SLOG_WARN, "\t- config file doesn't exist");
         slog(0, SLOG_INFO, "\t- creating a new config file");
         config_t *tmp = initConfig();
-        if (writeConfig(tmp, AM_CONFIG) != 0 ) {
+        if (writeConfig(tmp, AM_DEFAULT_CONFIG) != 0 ) {
             slog(0, SLOG_ERROR, "\t- failed to create a new config file");
             exit(1);
+        } else {
+            slog(0, SLOG_INFO, "\t- created a config file at: %s", AM_DEFAULT_CONFIG);
         }
         destroyConfig(tmp);
     }
-    if (access(AM_CONFIG, W_OK) == -1) {
+    if (access(AM_DEFAULT_CONFIG, W_OK) == -1) {
         slog(0, SLOG_ERROR, "\t- no write access to the config file");
         return 1;
     }
     config_t *amConfig = initConfig();
-    if (loadConfig(amConfig, AM_CONFIG) != 0) {
+    if (loadConfig(amConfig, AM_DEFAULT_CONFIG) != 0) {
         destroyConfig(amConfig);
         slog(0, SLOG_ERROR, "\t- could not load config file, may be corrupted");
         return 1;
@@ -205,6 +203,8 @@ int main(int argc, char *argv[]) {
     if (start == 1) {
         startAntman(amConfig, logName);
     }
+
+    destroyConfig(amConfig);
     slog(0, SLOG_INFO, "donzo.");
     return 0;
 }

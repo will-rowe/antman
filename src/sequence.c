@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
@@ -5,31 +6,93 @@
 #include "kseq.h"
 #include "sketch.h"
 #include "sequence.h"
+#include "watcher.h"
 
-//TODO: these are to be set by user
-#define K_SIZE 7
-#define SKETCH_SIZE 42
+
+
+//TODO: these are to be calculated and stored by antman
+#define REF_LENGTH 18246
 
 KSEQ_INIT(gzFile, gzread)
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
-// sketchFastq
-void sketchFastq(void* arg) {
-    const char* filepath = (char*)arg;
-
+// processRef
+void processRef(char* filepath, struct bloom* bf, int kSize, int sketchSize) {
     gzFile fp;
     kseq_t *seq;
     int l;
-
     fp = gzopen(filepath, "r");
     seq = kseq_init(fp);
     while ((l = kseq_read(seq)) >= 0) {
+        slog(0, SLOG_INFO, "\t\t- sequence: %s", seq->name.s);
+        slog(0, SLOG_INFO, "\t\t- length: %d", l);
+
+        // add the reference k-mers to the bloom filter
+        sketchSequence(seq->seq.s, l, kSize, sketchSize, bf, NULL);
+        slog(0, SLOG_INFO, "\t\t- processed %d k-mers", (l - kSize + 1));
+    }
+    kseq_destroy(seq);
+
+    // check for EOF
+    if (l != -1) {
+        slog(0, SLOG_ERROR, "EOF error for reference file: %d\n", l);
+    }
+    gzclose(fp);
+    return;
+}
+
+// processFastq
+void processFastq(void* args) {
+    watcherArgs_t* wargs;
+    wargs = (watcherArgs_t*)args;
+    gzFile fp;
+    kseq_t *seq;
+    int l;
+    fp = gzopen(wargs->filepath, "r");
+    seq = kseq_init(fp);
+
+    // process each sequence in the fastq file
+    while ((l = kseq_read(seq)) >= 0) {
+
         //slog(0, SLOG_INFO, "name: %s\n", seq->name.s);
         //if (seq->comment.l) printf("comment: %s\n", seq->comment.s);
         //slog(0, SLOG_INFO, "seq: %s\n;len: %d\n", seq->seq.s, l);
         //if (seq->qual.l) printf("qual: %s\n", seq->qual.s);
 
         // sketch the read
-        sketchSequence(seq->seq.s, l, K_SIZE, SKETCH_SIZE);
+        uint64_t* sketch = calloc(wargs->sketch_size, sizeof(uint64_t));
+        if(!sketch) {
+            slog(0, SLOG_ERROR, "could not allocate a sketch");
+            exit(1);
+        }
+        sketchSequence(seq->seq.s, l, wargs->k_size, wargs->sketch_size, NULL, sketch);
+        slog(0, SLOG_INFO, "\t- [sketcher]:\tsketched a %dbp sequence", l);        
+
+        // estimate read containment within the reference
+        // lock the thread whilst using the bloom filter
+        int intersections = 0, i;
+        pthread_mutex_lock( &mutex1 );
+        for (i = 0; i < wargs->sketch_size; i++) {
+            if (bloom_check(wargs->bloomFilter, &*(sketch + i), wargs->k_size)) {
+                intersections++;
+            }
+        }
+        pthread_mutex_unlock( &mutex1 );
+
+        intersections -= wargs->fp_rate * wargs->sketch_size;
+        double containmentEstimate = ((double)intersections / wargs->sketch_size);
+
+        int refTotalKmers = REF_LENGTH - wargs->k_size + 1;
+        int queryTotalKmers = l - wargs->k_size + 1;
+
+        //slog(0, SLOG_INFO, "%d\t%d\t%d\t%f", intersections, refTotalKmers, queryTotalKmers, containmentEstimate);
+
+        double result = ((double)(containmentEstimate * queryTotalKmers)) / ((refTotalKmers + queryTotalKmers) - (queryTotalKmers * containmentEstimate));
+
+        slog(0, SLOG_INFO, "\t- [sketcher]:\tcontainment = %f", result);
+
+
+        free(sketch);
     }
     kseq_destroy(seq);
 
@@ -39,41 +102,6 @@ void sketchFastq(void* arg) {
     }
     
     gzclose(fp);
+    free(wargs);
     return;
 }
-
-
-
-
-
-
-
-
-
-
-
-/*
-// fp rate for bf
-double false_positive = 0.001;
-
-
-double containment_jaccard_estimate(int sequence1_size, string sequence2, vector <string> sketch2, bloom_filter filter) {
-
-    int intersections = 0;
-    int sketch_size = sketch2.size();
-    for (int i = 0; i < sketch_size; i++) {
-        if (filter.contains(sketch2[i])) {
-            intersections++;
-        }
-    }
-    intersections -= false_positive * sketch_size;
-
-    double containment_estimate = ((double)intersections / sketch_size);
-
-    int size_sequence1_set = sequence1_size - kmer_size + 1;
-    int size_sequence2_set = sequence2.size() - kmer_size + 1;
-
-    return ((double)(containment_estimate * size_sequence2_set)) / (size_sequence1_set + size_sequence2_set - size_sequence2_set * containment_estimate);
-}
-
-*/

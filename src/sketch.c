@@ -41,11 +41,18 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 	return key;
 }
 
-// sketchSequence takes a sequence, the sequence length, the k-mer size, the sketch size and a pointer to a bloom filter
-// it generates a MinHash KMV sketch of the sequence
-// it also populates the bloom filter with hashed k-mers
-// TODO: decide how to return the sketch
-void sketchSequence(const char *str, int len, int k, int sketchSize, struct bloom* bf) {
+/*
+	sketchSequence runs k-mer decomposition on a sequence
+	k-mers are hashed and can then be added to a bloom filter or kmv sketch
+	arguments:
+		str - the sequence
+		len - the sequence length
+		k - k-mer size
+		sketchSize - sketchSize
+		bf - pointer to a bloom filter
+		sketchPtr - pointer to a sketch (which has been initalised to == sketchSize)
+*/
+void sketchSequence(const char* str, int len, int k, int sketchSize, struct bloom* bf, uint64_t* sketchPtr) {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,
 	// either need checks to make sure this is correct
@@ -90,15 +97,17 @@ void sketchSequence(const char *str, int len, int k, int sketchSize, struct bloo
 		} else l = 0, kmer_span = 0;
         if (i < k) continue;
 
-		// add the hashed k-mer to the bloom filter
-		bloom_add(bf, &hashedKmer, k);
+		// add the hashed k-mer to the bloom filter if required
+		if (bf != NULL) {
+			bloom_add(bf, &hashedKmer, k);
+		}
 
 		// now we have a hashed k-mer, first check if the sketch isn't at capacity yet
 		if (currentHeapSize < sketchSize) {
 
 			// check if the hashed k-mer is already in the sketch
 			if (hmSearch(hashedKmer)) continue;
-
+			
 			// add the hashed k-mer to the sketch and the tracker
 			if (currentHeapSize == 0) {
 				  kmvSketch = initHeap(hashedKmer); // special case for first minimum in sketch, which is needed to init the heap
@@ -123,20 +132,17 @@ void sketchSequence(const char *str, int len, int k, int sketchSize, struct bloo
 		hmInsert(hashedKmer);
 	}
 
-	// the sequence has now been sketched
-	uint64_t* sketchValues = getSketch(&kmvSketch, sketchSize);
+	// the sequence has now been sketched, so collect the minimums from the heap
+	if (sketchPtr != NULL) {
+		
+		// sanity check
+		assert(isEmpty(&kmvSketch) == false);
 
+		// add the minimums from the kmvSketch heap to the provided sketch array
+		getSketch(&kmvSketch, sketchSize, sketchPtr);
+	}
 
-	// tmp print loop
-	//printf("sketched sequence:\n");
-	//int tmp;
-	//for (tmp = 0; tmp < sketchSize; tmp++) {
-		//printf("%llu ", sketchValues[tmp]);
-	//}
-	//printf("\n");
-	free(sketchValues);
-
-	// finally, free the guff
+	// free the kmvSketch heap and the hashmap
 	destroy(&kmvSketch);
 	hmDestroy();
 }

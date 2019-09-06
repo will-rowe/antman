@@ -9,15 +9,17 @@
 
 #include "bloom.h"
 #include "daemonize.h"
+#include "sequence.h"
+#include "slog.h"
 #include "watcher.h"
 #include "workerpool.h"
-#include "slog.h"
+
 
 // TODO: set these values by the cli
 const int NUM_THREADS = 4;
-const double FP_RATE = 0.01;
-const int NUM_ELEMENTS = 100000;
 
+
+// done controls when to stop the antman threads
 volatile sig_atomic_t done = 0;
 
 // sigTermHandler is called in the event of a SIGTERM signal
@@ -40,24 +42,26 @@ void* startWatching(void *param) {
   if (FSW_OK != fsw_start_monitor(*handle)) {
     slog(0, SLOG_ERROR, "error creating thread for directory watcher");
     exit(1);
-  } else {
-    slog(0, SLOG_INFO, "\t- stopped the directory watcher");
   }
   return NULL;
 }
 
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
-int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
+int startDaemon(config_t* amConfig) {
 
     // create a bloom filter for the reference sequence
-    struct bloom bf;
-    bloom_init(&bf, NUM_ELEMENTS, FP_RATE);
-
+    // TODO: collect the ref seq location from the amConfig
+    char* tmpFile = "/Users/willrowe/Google Drive/code/c/projects/antman/tests/NiV_6_Malaysia.fasta";
+    slog(0, SLOG_INFO, "\t- loading reference file: %s", tmpFile);
+    struct bloom refBF;
+    bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
+    processRef(tmpFile, &refBF, amConfig->k_size, amConfig->sketch_size);
 
     // try daemonising the program
+    slog(0, SLOG_INFO, "launching daemon...");
     int res;
-    if( (res=daemonize(daemonName, wdir, NULL, NULL, NULL)) != 0 ) {
+    if( (res=daemonize(AM_PROG_NAME, amConfig->workingDir, NULL, NULL, NULL)) != 0 ) {
         slog(0, SLOG_ERROR, "could not start the antman daemon");
         exit(1);
     }
@@ -106,8 +110,17 @@ int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
     }
     slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watchDir);
 
+    // set up the watcher arguments
+    watcherArgs_t* wargs = malloc (sizeof (watcherArgs_t));
+    if (wargs == NULL) slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
+    wargs->workerPool = wp;
+    wargs->bloomFilter = &refBF;
+    wargs->k_size = amConfig->k_size;
+    wargs->sketch_size = amConfig->sketch_size;
+    wargs->fp_rate = amConfig->bloom_fp_rate;
+
     // set the watcher callback function
-    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wp)) {
+    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wargs)) {
         slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
         exit(1);
     }
@@ -118,6 +131,7 @@ int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
         slog(0, SLOG_ERROR, "could not start the watcher thread");
         exit(1);
     }
+    slog(0, SLOG_INFO, "antman is waiting for sequence data...");
 
     // run antman until a stop signal is received
     while (!done) {
@@ -125,6 +139,7 @@ int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
     }
 
     // stop the directory watcher
+    slog(0, SLOG_INFO, "\t- stopping the directory watcher");
     if (FSW_OK != fsw_stop_monitor(handle)) {
         slog(0, SLOG_ERROR, "error stopping the directory watcher");
         exit(1);
@@ -142,11 +157,15 @@ int startDaemon(char* daemonName, char* wdir, config_t* amConfig) {
     }
 
     // wait on any active threads in the workerpool
+    slog(0, SLOG_INFO, "\t- stopping the sketching threads");
     tpool_wait(wp);    
 
     // destroy the workerpool
     tpool_destroy(wp);
-    slog(0, SLOG_INFO, "\t- stopped the worker threads");
+
+    // free some stuff
+    bloom_free(&refBF);
+    free(wargs);
     return 0;
 }
 

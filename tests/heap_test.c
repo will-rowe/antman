@@ -12,6 +12,7 @@
 #define ERR_initHeap3 "could not destroy the heap"
 #define ERR_minHeap1 "heap not printed"
 #define ERR_minHeap2 "heap not min sorted"
+#define ERR_alloc "could not allocate"
 
 int tests_run = 0;
 
@@ -54,7 +55,11 @@ static char* test_minHeap() {
   push(&testHeap, valC);
 
   // check the heap can be printed and is in order
-  uint64_t* heapValues = getSketch(&testHeap, 3);
+  uint64_t* heapValues = calloc(3, sizeof(uint64_t));
+  if(!heapValues) {
+    return ERR_alloc;
+  } 
+  getSketch(&testHeap, 3, heapValues);
   if (heapValues[0] != valA || heapValues[1] != valC || heapValues[2] != valB) return ERR_minHeap1;
   free(heapValues);
 

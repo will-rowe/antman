@@ -10,8 +10,13 @@ config_t* initConfig() {
     if ((c = malloc(sizeof *c)) != NULL) {
         c->configFile = "";
         c->watchDir = AM_DEFAULT_WATCH_DIR;
+        c->workingDir = AM_DEFAULT_WORK_DIR;
         c->pid = -1;
         c->running = false;
+        c->k_size = AM_DEFAULT_K_SIZE;
+        c->sketch_size = AM_DEFAULT_SKETCH_SIZE;
+        c->bloom_fp_rate = AM_DEFAULT_BLOOM_FP_RATE;
+        c->bloom_max_elements = AM_DEFAULT_BLOOM_MAX_EL;
     }
     return c;
 }
@@ -32,7 +37,17 @@ int writeConfig(config_t* config, char* configFile) {
     config->configFile = configFile;
 
     // write it to file
-    json_fprintf(configFile, "{ configFile: %Q, watchDirectory: %Q, pid: %d, running: %B }", config->configFile, config->watchDir, config->pid, config->running);
+    json_fprintf(configFile, "{ configFile: %Q, workingDirectory: %Q, watchDirectory: %Q, pid: %d, running: %B, k_size: %d, sketch_size: %d, bloom_fp_rate, %f, bloom_max_elements: %d }",
+    config->configFile,
+    config->workingDir,
+    config->watchDir,
+    config->pid,
+    config->running,
+    config->k_size,
+    config->sketch_size,
+    config->bloom_fp_rate,
+    config->bloom_max_elements   
+    );
 
     // prettify the json
     json_prettify_file(configFile);
