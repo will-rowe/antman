@@ -1,3 +1,4 @@
+#include <math.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,7 +80,7 @@ void processFastq(void* args) {
         }
         pthread_mutex_unlock( &mutex1 );
 
-        intersections -= wargs->fp_rate * wargs->sketch_size;
+        intersections -= (int)floor(wargs->fp_rate * wargs->sketch_size);
         double containmentEstimate = ((double)intersections / wargs->sketch_size);
 
         int refTotalKmers = REF_LENGTH - wargs->k_size + 1;
@@ -87,9 +88,9 @@ void processFastq(void* args) {
 
         //slog(0, SLOG_INFO, "%d\t%d\t%d\t%f", intersections, refTotalKmers, queryTotalKmers, containmentEstimate);
 
-        double result = ((double)(containmentEstimate * queryTotalKmers)) / ((refTotalKmers + queryTotalKmers) - (queryTotalKmers * containmentEstimate));
+        double jaccardEst = ((double)(queryTotalKmers * containmentEstimate)) / ((queryTotalKmers + refTotalKmers ) - (queryTotalKmers * containmentEstimate));
 
-        slog(0, SLOG_INFO, "\t- [sketcher]:\tcontainment = %f", result);
+        slog(0, SLOG_INFO, "\t- [sketcher]:\tjaccardEst by containment = %f", jaccardEst);
 
 
         free(sketch);
