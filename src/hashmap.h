@@ -3,6 +3,7 @@
 #define HASHMAP_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define HASHMAP_SIZE 256
 
