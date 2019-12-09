@@ -1,7 +1,7 @@
 #ifndef WATCHER_H
 #define WATCHER_H
 
-#include "external/libfswatch/c/libfswatch.h"
+#include "../external/libfswatch/c/libfswatch.h"
 #include "bloom.h"
 #include "workerpool.h"
 
