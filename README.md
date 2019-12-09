@@ -1,5 +1,7 @@
 # A.N.T.M.A.N
 
+[![Build Status](https://travis-ci.org/will-rowe/antman.svg?branch=master)](https://travis-ci.org/will-rowe/antman)
+
 Automated Nanopore Tracking, Modification + Analysis daemoN
 
 > very much a WIP (incl. the backronym)
