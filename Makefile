@@ -49,7 +49,7 @@ $(OBJECT_FILES): $(INCL)
 $(OBJECT_FILES): $(OBJ)/%.o: %.c
 	@echo " - compiling" $<
 	@mkdir -p $(@D)
-	@$(CC) $(CFLAGS) -o $@ $<
+	@$(CC) -o $@ $< $(CFLAGS)
 
 
 
