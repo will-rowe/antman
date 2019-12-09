@@ -1,6 +1,6 @@
 # Compiler options
 CC=gcc
-CFLAGS=-c -ansi -g -Wall -O3 -lm -std=c99
+CFLAGS=-c -ansi -g -Wall -O3 -std=c99 -lm
 LDFLAGS=-I /usr/local/include
 EXECUTABLE_NAME=antman
 
