@@ -23,9 +23,9 @@ build: msg1 $(EXECUTABLE_FILES)
 test:
 	@echo "Running unit tests..."
 	@echo " - compiling tests"
-	@$(CC) $(TEST)/config_test.c -o $(TEST)/_test_config
-	@$(CC) $(TEST)/heap_test.c -o $(TEST)/_test_heap
-	@$(CC) $(TEST)/sketch_test.c -o $(TEST)/_test_sketch
+	@$(CC) -lm $(TEST)/config_test.c -o $(TEST)/_test_config
+	@$(CC) -lm $(TEST)/heap_test.c -o $(TEST)/_test_heap
+	@$(CC) -lm $(TEST)/sketch_test.c -o $(TEST)/_test_sketch
 	@echo " - launching test runner"
 	@cd $(TEST) && ./run_unit_tests.sh
 	@echo " - cleaning up"
