@@ -1,8 +1,5 @@
-matrix:
-    include:
-      - language: c
-        compiler: gcc
-        script: make test
-      - language: c
-        compiler: clang
-        script: make test
+language: c
+compiler:
+    - gcc
+    - clang
+script: make test && make
