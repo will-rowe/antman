@@ -1,6 +1,6 @@
 # Compiler options
 CC=gcc
-CFLAGS=-c -ansi -g -Wall -O3 -std=c99
+CFLAGS=-c -ansi -g -Wall -O3 -lm -std=c99
 LDFLAGS=-I /usr/local/include
 EXECUTABLE_NAME=antman
 
@@ -23,9 +23,9 @@ build: msg1 $(EXECUTABLE_FILES)
 test:
 	@echo "Running unit tests..."
 	@echo " - compiling tests"
-	@$(CC) -lm $(TEST)/config_test.c -o $(TEST)/_test_config
-	@$(CC) -lm $(TEST)/heap_test.c -o $(TEST)/_test_heap
-	@$(CC) -lm $(TEST)/sketch_test.c -o $(TEST)/_test_sketch
+	@$(CC) $(TEST)/config_test.c -o $(TEST)/_test_config
+	@$(CC) $(TEST)/heap_test.c -o $(TEST)/_test_heap
+	@$(CC) $(TEST)/sketch_test.c -o $(TEST)/_test_sketch
 	@echo " - launching test runner"
 	@cd $(TEST) && ./run_unit_tests.sh
 	@echo " - cleaning up"
