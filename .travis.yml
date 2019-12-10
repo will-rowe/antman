@@ -8,9 +8,8 @@ matrix:
                 sudo apt-get install -y \
                 autoconf \
                 automake
-
-script: 
-    - make test
-    - make
-    - ./bin/antman -h
-    - make clean
+            script: 
+                - make test
+                - make
+                - ./bin/antman -h
+                - make clean
