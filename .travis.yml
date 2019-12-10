@@ -1,11 +1,8 @@
 language: c
-compiler:
-    - gcc
-    - clang
 
 matrix:
     include:
-    
+
     # Build for 64-bit Linux
     - os: linux
         dist: xenial
@@ -18,7 +15,7 @@ matrix:
 
     # Build for OS X
     - os: osx
-      osx_image: xcode9.2
+        osx_image: xcode9.2
 
 script: 
     - make test
