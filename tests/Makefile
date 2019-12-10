@@ -1,5 +1,6 @@
-CC        ?= gcc
-CFLAGS    = -Wall -Wno-unknown-pragmas -Werror -O0 -std=c99 -D DEBUG=1 -I /usr/include -lm
+CC?= 		gcc
+CFLAGS= 	-Wall -Wno-unknown-pragmas -Werror -O0 -std=c99 -D DEBUG=1 -I /usr/include
+LIBS=		-lm -lz -lpthread
 
 test:
 	@echo "Running unit tests..."

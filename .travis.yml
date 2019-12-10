@@ -3,5 +3,7 @@ compiler:
     - gcc
     - clang
 script: 
-    - make -C tests test
+    - make test
     - make
+    - ./bin/antman -h
+    - make clean
