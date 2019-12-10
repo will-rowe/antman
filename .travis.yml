@@ -1,8 +1,25 @@
-dist: precise
 language: c
 compiler:
     - gcc
     - clang
+
+matrix:
+    include:
+    
+    # Build for 64-bit Linux
+    - os: linux
+        dist: xenial
+        sudo: required
+        install: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            autoconf \
+            automake
+
+    # Build for OS X
+    - os: osx
+      osx_image: xcode9.2
+
 script: 
     - make test
     - make
