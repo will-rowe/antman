@@ -8,17 +8,15 @@ compiler:
 matrix:
   include:
     - os: osx
-      osx_image: xcode11
-      addons:
-      homebrew:
-        packages:
-          - fswatch
-  include:
     - os: linux
       addons:
         apt:
-          packages:
-          - fswatch
+          sources:
+            - ubuntu-toolchain-r-test
+      before_install:
+        - sudo apt-get update -qq
+        - sudo apt-get install -y gettext
+        - sudo apt-get install -y autopoint
 
 script:
   - make
