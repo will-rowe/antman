@@ -8,6 +8,7 @@ matrix:
   include:
     - os: osx
       osx_image: xcode11
-
+  include:
+    - os: linux
 script:
   - make
