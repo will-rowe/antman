@@ -1,8 +1,8 @@
-CFLAGS=			-g -Wall -O2 -Wc++-compat #-Wextra
-CPPFLAGS=	
-INCLUDES=		-I /usr/local/include
+CC=				gcc-9
+CFLAGS=			-g -Wall -O2 -Wc++-compat -I/usr/local/include
 OBJS=			bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
-LIBS=			-lm -lz -lpthread
+LDFLAGS=		-L/usr/local/lib -L.
+LIBS=			-lpthread -lm -lz -lfswatch -lantman
 LIBFSWATCH= 	/usr/local/lib/libfswatch.dylib
 PROG=			antman
 BIN=			../bin
@@ -11,13 +11,14 @@ BIN=			../bin
 .SUFFIXES:.c .o
 
 .c.o:
-		$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
+		$(CC) -c $(CFLAGS) $< -o $@
 
 all:$(PROG)
 
 antman:main.o libantman.a
 		mkdir $(BIN)
-		$(CC) $(CFLAGS) $(INCLUDES) main.o -o $(BIN)/$@ -L. -lantman $(LIBS) $(LIBFSWATCH) 
+		$(CC) $(CFLAGS) $(LDFLAGS) main.o -o $(BIN)/$@ $(LIBS)
+		@echo "Donzo."
 
 libantman.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
