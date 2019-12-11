@@ -1,22 +1,29 @@
 dist: xenial
+install: make get-deps
+
 sudo: required
 language: c
-compiler: gcc
+compiler:
+  - gcc
 
-jobs:
-    include:
-      - os: linux
-        install: sudo apt-get update \
-        sudo apt-get install -y \
-        autoconf \
-        automake
-        script:
-        - make
-        - ./bin/antman -h
-        - make clean
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - os: osx
+      osx_image: xcode8
+      env:
+        - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
 
-      - os: osx
-        script:
-        - make
-        - ./bin/antman -h
-        - make clean
+before_install:
+  - eval "${MATRIX_EVAL}"
+
+script:
+  - make
