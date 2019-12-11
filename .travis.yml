@@ -1,5 +1,6 @@
 dist: xenial
 sudo: required
+dist: bionic
 language: c
 compiler:
   - gcc
@@ -16,8 +17,6 @@ matrix:
     - os: linux
       addons:
         apt:
-          sources:
-          - ubuntu-toolchain-r-test
           packages:
           - fswatch
 
