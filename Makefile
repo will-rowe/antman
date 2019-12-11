@@ -1,5 +1,5 @@
 all:
-		cd external/fswatch-1.14.0 && ./autogen.sh && ./configure && cd ../..
+		cd external/fswatch-1.14.0 && ./configure && cd ../..
 		$(MAKE) -C external/fswatch-1.14.0
 		$(MAKE) -C external/fswatch-1.14.0 install
 		$(MAKE) -C src
