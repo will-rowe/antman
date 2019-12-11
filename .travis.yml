@@ -8,6 +8,10 @@ compiler:
 matrix:
   include:
     - os: osx
+      addons:
+      homebrew:
+        packages:
+        - automake
     - os: linux
       addons:
         apt:
