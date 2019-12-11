@@ -10,5 +10,6 @@ matrix:
       osx_image: xcode11
   include:
     - os: linux
+
 script:
   - make
