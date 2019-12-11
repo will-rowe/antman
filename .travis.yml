@@ -8,8 +8,18 @@ matrix:
   include:
     - os: osx
       osx_image: xcode11
+      addons:
+      homebrew:
+        packages:
+          - fswatch
   include:
     - os: linux
+      addons:
+        apt:
+          sources:
+          - ubuntu-toolchain-r-test
+          packages:
+          - fswatch
 
 script:
   - make
