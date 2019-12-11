@@ -24,5 +24,5 @@ matrix:
         - sudo apt-get install -y autopoint
 
 script:
-  - sudo install-fswatch.sh
+  - sudo ./install-fswatch.sh
   - make
