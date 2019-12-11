@@ -1,4 +1,4 @@
-CC=				gcc-9
+CC=				gcc
 CFLAGS=			-g -Wall -O2 -Wc++-compat -I/usr/local/include
 OBJS=			bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
 LDFLAGS=		-L/usr/local/lib -L.
