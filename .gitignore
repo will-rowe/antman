@@ -2,3 +2,10 @@
 .antman.config
 .vscode/
 bin/
+ar-lib
+autom4te.cache/
+config.*
+depcomp
+missing
+ltmain.sh
+install-sh

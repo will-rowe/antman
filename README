@@ -28,12 +28,13 @@ Next up, it will query/update a LIMS and kick of specific workflows.
 brew install fswatch
 ```
 
-* then just run the makefile
+* then just run the usual, making sure to point out where libfswatch is
 
 ```bash
-make clean
-make test
+
+./configure CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
 make
+make install
 ```
 
 ## Commands
