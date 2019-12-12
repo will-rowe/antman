@@ -1,10 +1,10 @@
-CC=				gcc
-CFLAGS=			-g -Wall -O2 -Wc++-compat -I/usr/local/include
-OBJS=			bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
-LDFLAGS=		-L/usr/local/lib -L.
-LIBS=			-lpthread -lm -lz -lfswatch -lantman
-PROG=			antman
-BIN=			../bin
+CC=                     gcc
+CFLAGS=                 -g -Wall -O2 -Wc++-compat -I/usr/local/include
+OBJS=                   bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
+LDFLAGS=                -L/usr/local/lib -L.
+LIBS=                   -lantman -lpthread -lm -lz -lfswatch
+PROG=                   antman
+BIN=                    ../bin
 
 .PHONY:all clean
 .SUFFIXES:.c .o
@@ -14,12 +14,12 @@ BIN=			../bin
 
 all:$(PROG)
 
-antman:main.o libantman.a
+$(PROG):main.o libantman.a
 		mkdir $(BIN)
 		$(CC) $(CFLAGS) $(LDFLAGS) main.o -o $(BIN)/$@ $(LIBS)
 		@echo "Donzo."
 
-libantman.a:$(OBJS)
+lib$(PROG).a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
 
 clean:
