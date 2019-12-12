@@ -1,11 +1,13 @@
 .DS_Store
 .antman.config
 .vscode/
-bin/
+src/libantman.a
+src/.deps/
 ar-lib
 autom4te.cache/
 config.*
 depcomp
 missing
 ltmain.sh
-install-sh
+libtool
+Makefile
