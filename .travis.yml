@@ -25,5 +25,6 @@ matrix:
 
 script:
   - sudo ./install-fswatch.sh
+  - ./autogen.sh
   - ./configure CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
   - make
