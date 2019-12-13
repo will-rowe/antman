@@ -22,16 +22,24 @@ Next up, it will query/update a LIMS and kick of specific workflows.
 
 ## Install
 
-* depends on libfswatch, at the moment I'm just getting this with brew
+* install libfswatch
+
+ANTMAN depends on libfswatch, at the moment I'm just getting this with brew
 
 ```bash
 brew install fswatch
 ```
 
-* then just run the usual, making sure to point out where libfswatch is
+Or you can use the install script I wrote:
 
 ```bash
+./scripts/install-fswatch.sh
+```
 
+
+* then just run the usual C setup, making sure to point out where libfswatch is
+
+```bash
 ./configure CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
 make
 make install
