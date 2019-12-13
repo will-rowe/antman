@@ -1,4 +1,4 @@
-AC_INIT([antman],[0.1],[wpmrowe@gmail.com])
+AC_INIT([antman], m4_normalize(m4_include([VERSION])), [wpmrowe@gmail.com])
 
 # Initialize Automake
 AM_INIT_AUTOMAKE([-Wall -Werror gnu subdir-objects std-options 1.14 foreign])

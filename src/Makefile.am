@@ -4,9 +4,10 @@ CLEANFILES =            libantman.a
 EXTRA_FLAGS =           -g -Wall -O2 -Wc++-compat
 LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
+VERSION =               @VERSION@
 
 %.o : %.c
-		$(CC) -c $(CFLAGS) $< -o $@
+		$(CC) -c $(CFLAGS) -DVERSION=\"$(VERSION)\" $< -o $@
 
 libantman.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
