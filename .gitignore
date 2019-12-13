@@ -1,9 +1,9 @@
 .DS_Store
 .antman.config
-.vscode/
-src/.deps/
+.vscode
+.deps
 ar-lib
-autom4te.cache/
+autom4te.cache
 config.*
 depcomp
 missing
