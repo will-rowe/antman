@@ -33,5 +33,5 @@ script:
   - make
   - make check
   - sudo make install
-  - antman -h
+  - ./test-runner.py
   - make clean
