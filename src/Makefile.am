@@ -1,6 +1,8 @@
 AUTOMAKE_OPTIONS =      foreign
+SUBDIRS=                unit-tests
 CLEANFILES =            libantman.a
 EXTRA_FLAGS =           -g -Wall -O2 -Wc++-compat
+LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
 
 %.o : %.c
@@ -11,7 +13,7 @@ libantman.a:$(OBJS)
 
 bin_PROGRAMS = antman
 antman_SOURCES = main.c config.h daemonize.h ketopt.h helpers.h slog.h
-antman_LDADD = libantman.a -lpthread -lm -lz -lfswatch
+antman_LDADD = libantman.a $(LD_ADD)
 
 main.o: config.h daemonize.h ketopt.h helpers.h slog.h
 bloom.o: bloom.h murmurhash2.h

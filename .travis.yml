@@ -28,3 +28,7 @@ script:
   - ./autogen.sh
   - ./configure CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
   - make
+  - make test
+  - make install
+  - antman -h
+  - make clean
