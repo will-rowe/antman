@@ -9,5 +9,8 @@ depcomp
 missing
 ltmain.sh
 libtool
+compile
+install-sh
+test-driver
 Makefile
 Makefile.in
