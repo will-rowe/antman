@@ -1,7 +1,7 @@
 AC_INIT([antman],[0.1],[wpmrowe@gmail.com])
 
 # Initialize Automake
-AM_INIT_AUTOMAKE([-Wall -Werror gnu subdir-objects std-options 1.14])
+AM_INIT_AUTOMAKE([-Wall -Werror gnu subdir-objects std-options 1.14 foreign])
 AM_SILENT_RULES([yes])
 AM_PROG_AR
 LT_INIT

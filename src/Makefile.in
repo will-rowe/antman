@@ -103,16 +103,13 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_antman_OBJECTS = antman-main.$(OBJEXT)
+am_antman_OBJECTS = main.$(OBJEXT)
 antman_OBJECTS = $(am_antman_OBJECTS)
 antman_DEPENDENCIES = libantman.a
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-antman_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(antman_CFLAGS) $(CFLAGS) \
-	$(antman_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -128,7 +125,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/antman-main.Po
+am__depfiles_remade = ./$(DEPDIR)/main.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -186,7 +183,7 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 CC = gcc
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = -g -Wall -O2 -Wc++-compat -I/usr/local/include
+CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
@@ -294,9 +291,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
 OBJS = bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
 antman_SOURCES = main.c config.h daemonize.h ketopt.h helpers.h slog.h
-antman_CFLAGS = -g -Wall -O2 -Wc++-compat -I/usr/local/include
 antman_LDADD = libantman.a -lpthread -lm -lz -lfswatch
-antman_LDFLAGS = -L/usr/local/lib -L.
 all: all-am
 
 .SUFFIXES:
@@ -398,7 +393,7 @@ installcheck-binPROGRAMS: $(bin_PROGRAMS)
 
 antman$(EXEEXT): $(antman_OBJECTS) $(antman_DEPENDENCIES) $(EXTRA_antman_DEPENDENCIES) 
 	@rm -f antman$(EXEEXT)
-	$(AM_V_CCLD)$(antman_LINK) $(antman_OBJECTS) $(antman_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(antman_OBJECTS) $(antman_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -406,7 +401,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/antman-main.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -437,20 +432,6 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-antman-main.o: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(antman_CFLAGS) $(CFLAGS) -MT antman-main.o -MD -MP -MF $(DEPDIR)/antman-main.Tpo -c -o antman-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/antman-main.Tpo $(DEPDIR)/antman-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='antman-main.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(antman_CFLAGS) $(CFLAGS) -c -o antman-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-
-antman-main.obj: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(antman_CFLAGS) $(CFLAGS) -MT antman-main.obj -MD -MP -MF $(DEPDIR)/antman-main.Tpo -c -o antman-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/antman-main.Tpo $(DEPDIR)/antman-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='antman-main.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(antman_CFLAGS) $(CFLAGS) -c -o antman-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -585,7 +566,7 @@ clean: clean-am
 clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/antman-main.Po
+		-rm -f ./$(DEPDIR)/main.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -631,7 +612,7 @@ install-ps-am:
 installcheck-am: installcheck-binPROGRAMS
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/antman-main.Po
+		-rm -f ./$(DEPDIR)/main.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
