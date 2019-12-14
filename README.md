@@ -42,7 +42,14 @@ Or you can use the install script I wrote:
 ```bash
 ./configure CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
 make
+make check
 make install
+```
+
+* you can make sure it's working:
+
+```bash
+./test-runner.py
 ```
 
 ## Commands

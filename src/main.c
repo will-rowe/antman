@@ -21,9 +21,43 @@ void printUsage(void)
            "\t --start                \t start the antman daemon\n"
            "\t --stop                 \t stop the antman daemon\n"
            "\t --setWatchDir <path>   \t set the watch directory\n"
+           "\t --getPID               \t return the PID of the antman daemon\n"
            "\n"
            "\t -h                     \t prints this help and exits\n"
            "\t -v                     \t prints version number and exits\n");
+}
+
+/*
+  checkPID
+   - checks if the antman daemon is running
+   - then checks if the PID is correct
+   - returns the PID of the antman daemon
+*/
+int checkPID(config_t *amConfig)
+{
+
+    // if running, check the PID
+    if (amConfig->running)
+    {
+        // check it exists
+        if (kill(amConfig->pid, 0) != 0)
+        {
+            fprintf(stderr, "error: the registered antman pid is not running\n\n");
+            exit(1);
+        }
+
+        // TODO: check it PID name is antman
+        // something like #ps -p $(./src/antman --getPID) -o comm=
+
+        // return the PID
+        return amConfig->pid;
+    }
+
+    // return -1 if no daemon is running
+    else
+    {
+        return -1;
+    }
 }
 
 /*
@@ -39,7 +73,11 @@ int stopAntman(config_t *amConfig)
     {
         slog(0, SLOG_INFO, "stopping the daemon...");
         slog(0, SLOG_INFO, "\t- daemon PID: %d", amConfig->pid);
-        kill(amConfig->pid, SIGTERM);
+        if (kill(amConfig->pid, SIGTERM) != 0)
+        {
+            slog(0, SLOG_ERROR, "could not kill the daemon process");
+            return 1;
+        }
 
         //TODO: instead of the above, use waitpid, then decide to use a SIGKILL and then harvest zombies
 
@@ -118,10 +156,12 @@ int main(int argc, char *argv[])
     static ko_longopt_t longopts[] = {
         {"start", ko_no_argument, 301},
         {"stop", ko_no_argument, 302},
-        {"setWatchDir", ko_required_argument, 303}};
+        {"setWatchDir", ko_required_argument, 303},
+        {"getPID", ko_no_argument, 304},
+        {0, 0, 0}};
 
     // set up the job list
-    int start = 0, stop = 0;
+    int start = 0, stop = 0, getPID = 0;
     char *watchDir = "";
 
     // get the CLI info
@@ -145,6 +185,10 @@ int main(int argc, char *argv[])
             stop = 1;
         else if (c == 303)
             opt.arg ? (watchDir = opt.arg) : (watchDir = AM_DEFAULT_WATCH_DIR);
+        else if (c == 304)
+        {
+            getPID = 1;
+        }
         else if (c == 'u')
             printf("unused flag:  -u %s\n", opt.arg);
         else if (c == '?')
@@ -162,11 +206,47 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop == 0 && (watchDir[0] == '\0'))
+    if (start + stop + getPID == 0 && (watchDir[0] == '\0'))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
         return 1;
+    }
+
+    // check the config exists and is accessible
+    if (access(AM_DEFAULT_CONFIG, F_OK) == -1)
+    {
+        // config doesn't exist, so create one
+        config_t *tmp = initConfig();
+        if (writeConfig(tmp, AM_DEFAULT_CONFIG) != 0)
+        {
+            fprintf(stderr, "error: failed to create a config file - check permissions\n\n");
+            exit(1);
+        }
+        destroyConfig(tmp);
+    }
+    if (access(AM_DEFAULT_CONFIG, W_OK) == -1)
+    {
+        fprintf(stderr, "error: failed to write to config file - check permissions\n\n");
+        exit(1);
+    }
+    config_t *amConfig = initConfig();
+    if (loadConfig(amConfig, AM_DEFAULT_CONFIG) != 0)
+    {
+        destroyConfig(amConfig);
+        fprintf(stderr, "error: failed to load config file\n\n");
+        exit(1);
+    }
+
+    // get the PID of the antman daemon (returns -1 if no daemon is running)
+    int daemonPID = checkPID(amConfig);
+
+    // report PID if requested and exit
+    if (getPID == 1)
+    {
+        printf("%d\n", daemonPID);
+        destroyConfig(amConfig);
+        return 0;
     }
 
     // set up the log
@@ -174,39 +254,7 @@ int main(int argc, char *argv[])
     snprintf(logName, sizeof logName, "%s%s%s", AM_PROG_NAME, "-", getTimestamp());
     slog_init(logName, "log/slog.cfg", 4, 1);
     slog(0, SLOG_INFO, "starting antman (version: %s)", VERSION);
-
-    // all good so far, now make sure the config file exists and can be written to
-    slog(0, SLOG_INFO, "loading the config file...");
-    slog(0, SLOG_INFO, "\t- registered location: %s", AM_DEFAULT_CONFIG);
-    if (access(AM_DEFAULT_CONFIG, F_OK) == -1)
-    {
-        slog(0, SLOG_WARN, "\t- config file doesn't exist");
-        slog(0, SLOG_INFO, "\t- creating a new config file");
-        config_t *tmp = initConfig();
-        if (writeConfig(tmp, AM_DEFAULT_CONFIG) != 0)
-        {
-            slog(0, SLOG_ERROR, "\t- failed to create a new config file");
-            exit(1);
-        }
-        else
-        {
-            slog(0, SLOG_INFO, "\t- created a config file at: %s", AM_DEFAULT_CONFIG);
-        }
-        destroyConfig(tmp);
-    }
-    if (access(AM_DEFAULT_CONFIG, W_OK) == -1)
-    {
-        slog(0, SLOG_ERROR, "\t- no write access to the config file");
-        return 1;
-    }
-    config_t *amConfig = initConfig();
-    if (loadConfig(amConfig, AM_DEFAULT_CONFIG) != 0)
-    {
-        destroyConfig(amConfig);
-        slog(0, SLOG_ERROR, "\t- could not load config file, may be corrupted");
-        return 1;
-    }
-    slog(0, SLOG_INFO, "\t- config loaded");
+    slog(0, SLOG_INFO, "\t- using config: %s", AM_DEFAULT_CONFIG);
 
     // handle any stop request
     if (stop == 1)
