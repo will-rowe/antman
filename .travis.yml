@@ -13,7 +13,6 @@ matrix:
           update: true
           packages:
           - automake
-          - gettext
           - fswatch
     - os: linux
       addons:
@@ -22,8 +21,6 @@ matrix:
             - ubuntu-toolchain-r-test
       before_install:
         - sudo apt-get update -qq
-        - sudo apt-get install -y gettext
-        - sudo apt-get install -y autopoint
         - sudo ./scripts/install-fswatch.sh
         - sudo ldconfig
 
