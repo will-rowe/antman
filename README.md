@@ -1,65 +1,32 @@
-# A.N.T.M.A.N
-
-[![Build Status](https://travis-ci.org/will-rowe/antman.svg?branch=master)](https://travis-ci.org/will-rowe/antman)
-
-Automated Nanopore Tracking, Modification + Analysis daemoN
-
-> very much a WIP (incl. the backronym)
-
-***
+<div align="center">
+    <img src="misc/antman-logo-with-text.png?raw=true?" alt="antman-logo" width="250">
+    <h3><a>Automated Nanopore Tracking, Modification + Analysis daemoN</a></h3>
+    <hr/>
+    <a href="https://travis-ci.org/will-rowe/antman"><img src="https://travis-ci.org/will-rowe/antman.svg?branch=master" alt="travis"></a>
+    <a href="https://antman.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/antman/badge/?version=latest" alt="Documentation Status" /></a>
+    <a href=""><img src="https://img.shields.io/badge/status-WIP-yellow" alt="project status" /></a>
+    <hr/>
+</div>
 
 ## What is it
 
-At the moment, it doesn't do much...
+At the moment, it's a work in progress...
 
-It will run in the background and register any new FASTQ files that appear in a given directory (and sub directories).
+ANTMAN is a system daemon that will collect nanopore reads as they are basecalled, check them against a whitelist and then do some more stuff (e.g. select and run specific Nextflow pipelines, update a LIMS, index reads).
 
-FASTQ files are checked and added to a processing queue. You can start / stop antman and tell it where to watch.
+Currently, the daemon will:
 
-Each FASTQ read is sketched (using KMV MinHash) and will be checked for containment in the target genome(s).
+* watch a directory
+* detect new FASTQ files and add to a processing queue
+* sketch the reads (using KMV MinHash)
+* run a containment search against a reference sequence
 
-Next up, it will query/update a LIMS and kick of specific workflows.
-
-## Install
-
-* install libfswatch
-
-ANTMAN depends on libfswatch, at the moment I'm just getting this with brew
+## Quickstart
 
 ```bash
-brew install fswatch
-```
-
-Or you can use the install script I wrote:
-
-```bash
-./scripts/install-fswatch.sh
-```
-
-
-* then just run the usual C setup, making sure to point out where libfswatch is
-
-```bash
-./configure CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
-make
-make check
-make install
-```
-
-* you can make sure it's working:
-
-```bash
-./test-runner.py
-```
-
-## Commands
-
-```bash
+antman -setWatchDir /path/to/some/dir
 antman -start
 antman -stop
-antman -setWatchDir /path/to/some/dir
 ```
 
-## TODO
-
-* at the moment, it just uses the log file for tracking active PID - it needs to actually check these PIDs in case the log file becomes corrupted
+> ANTMAN is being actively worked on and more documentation is being added
