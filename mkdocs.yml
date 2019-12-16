@@ -1,0 +1,5 @@
+site_name: ANTMAN
+nav:
+  - Home: index.md
+  - Installation: installation.md
+theme: material
