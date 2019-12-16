@@ -9,8 +9,8 @@ config_t* initConfig() {
     config_t* c;
     if ((c = malloc(sizeof *c)) != NULL) {
         c->configFile = "";
+        c->logFile = "";
         c->watchDir = AM_DEFAULT_WATCH_DIR;
-        c->workingDir = AM_DEFAULT_WORK_DIR;
         c->pid = -1;
         c->running = false;
         c->k_size = AM_DEFAULT_K_SIZE;
@@ -37,9 +37,9 @@ int writeConfig(config_t* config, char* configFile) {
     config->configFile = configFile;
 
     // write it to file
-    json_fprintf(configFile, "{ configFile: %Q, workingDirectory: %Q, watchDirectory: %Q, pid: %d, running: %B, k_size: %d, sketch_size: %d, bloom_fp_rate, %f, bloom_max_elements: %d }",
+    json_fprintf(configFile, "{ configFile: %Q, logFile: %Q, watchDirectory: %Q, pid: %d, running: %B, k_size: %d, sketch_size: %d, bloom_fp_rate, %f, bloom_max_elements: %d }",
     config->configFile,
-    config->workingDir,
+    config->logFile,
     config->watchDir,
     config->pid,
     config->running,
@@ -64,7 +64,7 @@ int loadConfig(config_t* config, char* configFile) {
     char* content = json_fread(configFile);
 
     // scan the file content and populate the tmp config
-    int status = json_scanf(content, strlen(content), "{ configFile: %Q, watchDirectory: %Q, pid: %d, running: %B }", &c.configFile, &c.watchDir, &c.pid, &c.running);
+    int status = json_scanf(content, strlen(content), "{ configFile: %Q, logFile: %Q, watchDirectory: %Q, pid: %d, running: %B }", &c.configFile, &c.logFile, &c.watchDir, &c.pid, &c.running);
 
     // check for error in json scan (-1 == error, 0 == no elements found, >0 == elements parsed)
     if (status < 1) {
@@ -73,6 +73,7 @@ int loadConfig(config_t* config, char* configFile) {
 
     // copy the config over to the heap
     config->configFile = c.configFile;
+    config->logFile = c.logFile;
     config->watchDir = c.watchDir;
     config->pid = c.pid;
     config->running = c.running;

@@ -4,19 +4,25 @@ CLEANFILES =            libantman.a
 EXTRA_FLAGS =           -g -Wall -O2 -Wc++-compat
 LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
-VERSION =               @VERSION@
+default_config =        "/tmp/.antman.config"
+default_watch_dir =     "/var/lib/MinKNOW/data/reads"
+
 
 %.o : %.c
-		$(CC) -c $(CFLAGS) -DVERSION=\"$(VERSION)\" $< -o $@
+		$(CC) -c $(CFLAGS) \
+		-DAM_VERSION=\"@VERSION@\" \
+		-DAM_DEFAULT_CONFIG=\"$(default_config)\" \
+		-DAM_DEFAULT_WATCH_DIR=\"$(default_watch_dir)\" \
+		$< -o $@
 
 libantman.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
 
 bin_PROGRAMS = antman
-antman_SOURCES = main.c config.h daemonize.h ketopt.h helpers.h slog.h
+antman_SOURCES = main.c config.h daemonize.h ketopt.h slog.h
 antman_LDADD = libantman.a $(LD_ADD)
 
-main.o: config.h daemonize.h ketopt.h helpers.h slog.h
+main.o: config.h daemonize.h ketopt.h slog.h
 bloom.o: bloom.h murmurhash2.h
 config.o: config.h frozen.h
 daemonize.o: daemonize.h bloom.h sequence.h slog.h watcher.h workerpool.h

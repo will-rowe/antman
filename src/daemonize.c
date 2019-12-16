@@ -60,10 +60,12 @@ int startDaemon(config_t *amConfig)
     bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
     processRef(tmpFile, &refBF, amConfig->k_size, amConfig->sketch_size);
 
+
     // try daemonising the program
     slog(0, SLOG_INFO, "launching daemon...");
+    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s.log", amConfig->logFile);
     int res;
-    if ((res = daemonize(AM_PROG_NAME, amConfig->workingDir, NULL, NULL, NULL)) != 0)
+    if ((res = daemonize(AM_PROG_NAME, "NULL", NULL, NULL, NULL)) != 0)
     {
         slog(0, SLOG_ERROR, "could not start the antman daemon");
         exit(1);
