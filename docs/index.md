@@ -1,17 +1,10 @@
-# Welcome to MkDocs
+# Welcome to ANTMAN's documentation
 
-For full documentation visit [mkdocs.org](https://mkdocs.org).
+**ANTMAN** is a WIP
 
 ## Commands
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs help` - Print this help message.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+* `antman --start` - Start the antman daemon
+* `antman --stop` - Stop the antman daemon
+* `antman --setWatchDir` - Set the directory to watch
+* `antman --getPID` - Get the current PID of the daemon

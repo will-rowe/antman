@@ -8,25 +8,21 @@ I'll also look at making a static binary but this might be tricky due to how we 
 
 You can compile from source, once you have taken care of the dependencies.
 
-### Dependencies
+1. Get the dependencies
 
-Currently there is just one dependency not packaged with the repo.
-
-* libfswatch
-
-ANTMAN depends on libfswatch. It's easiest to get this with a package manager:
+Currently there is just [libfswatch](https://github.com/emcrisostomo/fswatch). It's easiest to get this with a package manager:
 
 ```bash
 brew install fswatch
 ```
 
-Alternatively, you can follow the instructions at the [fswatch repo](https://github.com/emcrisostomo/fswatch) or use the install script from the ANTMAN repo:
+Alternatively, you can follow the instructions at the [fswatch repo](https://github.com/emcrisostomo/fswatch) or use the install script from the **ANTMAN** repo:
 
 ```bash
 ./scripts/install-fswatch.sh
 ```
 
-### Compiling
+2. Compile ANTMAN
 
 Just run the usual C autotools steps, making sure to point out where libfswatch is:
 
@@ -37,9 +33,9 @@ make check
 make install
 ```
 
-### Testing
+3. Run some more tests
 
-ANTMAN has some unit tests, which are run in the previous step (`make check`). There are also some system tests which check that ANTMAN installed correctly:
+**ANTMAN** has some unit tests, which are run in the previous step (`make check`). There are also some system tests which check that **ANTMAN** installed correctly:
 
 ```bash
 ./run-antman-tests.py
