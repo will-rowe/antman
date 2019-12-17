@@ -24,7 +24,7 @@ antman_LDADD = libantman.a $(LD_ADD)
 
 main.o: config.h daemonize.h ketopt.h slog.h
 bloom.o: bloom.h murmurhash2.h
-config.o: config.h frozen.h
+config.o: config.h frozen.h slog.h
 daemonize.o: daemonize.h bloom.h sequence.h slog.h watcher.h workerpool.h
 hashmap.o: hashmap.h
 heap.o: heap.h slog.h

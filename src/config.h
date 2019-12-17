@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "slog.h"
+
 #define AM_PROG_NAME "antman"
 #define AM_DEFAULT_K_SIZE 7
 #define AM_DEFAULT_SKETCH_SIZE 128
@@ -12,9 +14,11 @@
 */
 typedef struct config
 {
-    char *configFile;
-    char *logFile;
-    char *watchDir;
+    char *filename;
+    char *created;
+    char *modified;
+    char *current_log_file;
+    char *watch_directory;
     int pid;
     int k_size;
     int sketch_size;
@@ -29,5 +33,6 @@ config_t *initConfig();
 void destroyConfig(config_t *config);
 int writeConfig(config_t *config, char *configFile);
 int loadConfig(config_t *config, char *configFile);
+void slog_get_date(SlogDate *pDate);
 
 #endif

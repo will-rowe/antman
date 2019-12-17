@@ -1,16 +1,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "frozen.h"
+
 #include "config.h"
+#include "frozen.h"
 
 // initConfig
 config_t* initConfig() {
     config_t* c;
     if ((c = malloc(sizeof *c)) != NULL) {
-        c->configFile = "";
-        c->logFile = "";
-        c->watchDir = AM_DEFAULT_WATCH_DIR;
+        c->filename = "";
+        c->created = NULL;
+        c->modified = "";
+        c->current_log_file = "";
+        c->watch_directory = AM_DEFAULT_WATCH_DIR;
         c->pid = -1;
         c->k_size = AM_DEFAULT_K_SIZE;
         c->sketch_size = AM_DEFAULT_SKETCH_SIZE;
@@ -33,19 +36,39 @@ int writeConfig(config_t* config, char* configFile) {
     if (config == 0) return 1;
 
     // update with config with the filepath we are writing to
-    config->configFile = configFile;
+    config->filename = configFile;
+
+    // update the created (if new) and the modified date
+    SlogDate date;
+    slog_get_date(&date);
+    char timeStamp[18];
+    int ret = snprintf(timeStamp, sizeof(timeStamp), "%d-%d-%d:%d%d", date.year, date.mon, date.day, date.hour, date.min);
+    if (ret > 18) {
+        fprintf(stderr, "failed to format time stamp\n");
+        return 1;
+    }
+    if (config->created == NULL) {
+        config->created = timeStamp;
+    }
+    config->modified = timeStamp;
 
     // write it to file
-    json_fprintf(configFile, "{ configFile: %Q, logFile: %Q, watchDirectory: %Q, pid: %d, k_size: %d, sketch_size: %d, bloom_fp_rate, %f, bloom_max_elements: %d }",
-    config->configFile,
-    config->logFile,
-    config->watchDir,
+    ret = json_fprintf(configFile, "{ filename: %Q, created: %Q, modified: %Q, current_log_file: %Q, watch_directory: %Q, pid: %d, k_size: %d, sketch_size: %d, bloom_fp_rate: %f, bloom_max_elements: %d }",
+    config->filename,
+    config->created,
+    config->modified,
+    config->current_log_file,
+    config->watch_directory,
     config->pid,
     config->k_size,
     config->sketch_size,
     config->bloom_fp_rate,
     config->bloom_max_elements   
     );
+    if (ret < 0) {
+        fprintf(stderr, "failed to write config to disk (%d)\n", ret);
+        return 1;
+    }
 
     // prettify the json
     json_prettify_file(configFile);
@@ -56,13 +79,24 @@ int writeConfig(config_t* config, char* configFile) {
 int loadConfig(config_t* config, char* configFile) {
 
     // create a stack allocated tmp config
-    config_t c = { .pid = -1, .watchDir = NULL };
+    config_t c = { .pid = -1, .watch_directory = NULL };
 
     // read the file into a buffer
     char* content = json_fread(configFile);
 
     // scan the file content and populate the tmp config
-    int status = json_scanf(content, strlen(content), "{ configFile: %Q, logFile: %Q, watchDirectory: %Q, pid: %d}", &c.configFile, &c.logFile, &c.watchDir, &c.pid);
+    int status = json_scanf(content, strlen(content), "{ filename: %Q, created: %Q, modified: %Q, current_log_file: %Q, watch_directory: %Q, pid: %d, k_size: %d, sketch_size: %d, bloom_fp_rate: %f, bloom_max_elements: %d }",
+    &c.filename,
+    &c.created,
+    &c.modified,
+    &c.current_log_file,
+    &c.watch_directory,
+    &c.pid,
+    &c.k_size,
+    &c.sketch_size,
+    &c.bloom_fp_rate,
+    &c.bloom_max_elements 
+    );
 
     // check for error in json scan (-1 == error, 0 == no elements found, >0 == elements parsed)
     if (status < 1) {
@@ -70,9 +104,15 @@ int loadConfig(config_t* config, char* configFile) {
     }
 
     // copy the config over to the heap
-    config->configFile = c.configFile;
-    config->logFile = c.logFile;
-    config->watchDir = c.watchDir;
+    config->filename = c.filename;
+    config->created = c.created;
+    config->modified = c.modified;
+    config->current_log_file = c.current_log_file;
+    config->watch_directory = c.watch_directory;
     config->pid = c.pid;
+    config->k_size = c.k_size;
+    config->sketch_size = c.sketch_size;
+    config->bloom_fp_rate = c.bloom_fp_rate;
+    config->bloom_max_elements = c.bloom_max_elements;
     return 0;
 }

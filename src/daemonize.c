@@ -63,7 +63,7 @@ int startDaemon(config_t *amConfig)
 
     // try daemonising the program
     slog(0, SLOG_INFO, "launching daemon...");
-    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s", amConfig->logFile);
+    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s", amConfig->current_log_file);
     int res;
     if ((res = daemonize(AM_PROG_NAME, "NULL", NULL, NULL, NULL)) != 0)
     {
@@ -87,7 +87,7 @@ int startDaemon(config_t *amConfig)
     // update the config with the PID
     // TODO: this should probably be done in a lock file instead...
     amConfig->pid = pid;
-    if (writeConfig(amConfig, amConfig->configFile) != 0)
+    if (writeConfig(amConfig, amConfig->filename) != 0)
     {
         slog(0, SLOG_ERROR, "failed to update config file");
         exit(1);
@@ -110,12 +110,12 @@ int startDaemon(config_t *amConfig)
     const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
 
     // add the path(s) for the watcher to watch
-    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir))
+    if (FSW_OK != fsw_add_path(handle, amConfig->watch_directory))
     {
-        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
+        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watch_directory);
         exit(1);
     }
-    slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watchDir);
+    slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watch_directory);
 
     // set up the watcher arguments
     watcherArgs_t *wargs = malloc(sizeof(watcherArgs_t));

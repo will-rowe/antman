@@ -12,21 +12,6 @@
 #include "slog.h"
 
 /*
-   getLogName creates a default name for the log file
-*/
-char *getLogName()
-{
-    time_t timer;
-    static char buffer[28];
-    struct tm* tm_info;
-    time(&timer);
-    tm_info = localtime(&timer);
-    strftime(buffer, 28, "./antman-%Y-%m-%d-%H%M.log", tm_info);
-    puts(buffer);
-    return buffer;
-}
-
-/*
    printUsage prints the usage info for antman
 */
 void printUsage(void)
@@ -52,25 +37,19 @@ void printUsage(void)
 */
 int checkPID(config_t *amConfig)
 {
-
-    // if running, check the PID
     if (amConfig->pid >= 0)
     {
-        // check it exists
         if (kill(amConfig->pid, 0) != 0)
         {
-            fprintf(stderr, "error: the registered antman pid is not running\n\n");
+            fprintf(stderr, "\nerror: the registered antman pid is not running\n\n");
             return(-2);
         }
 
         // TODO: check it PID name is antman
         // something like #ps -p $(./src/antman --getPID) -o comm=
 
-        // return the PID
         return amConfig->pid;
     }
-
-    // return -1 if no daemon is running
     else
     {
         return -1;
@@ -79,62 +58,58 @@ int checkPID(config_t *amConfig)
 
 /*
    stopAntman
+    - issues SIGTERM to antman daemon
+    - updates the config
 */
 int stopAntman(config_t *amConfig)
 {
     if (kill(amConfig->pid, SIGTERM) != 0)
     {
-        fprintf(stderr, "error: could not kill the daemon process running on PID %d\n\n", amConfig->pid);
+        fprintf(stderr, "\nerror: could not kill the daemon process running on PID %d\n\n", amConfig->pid);
         return 1;
     }
 
     //TODO: instead of the above, use waitpid, then decide to use a SIGKILL and then harvest zombies
 
-    fprintf(stdout, "success: stopped the daemon process running on PID %d\n", amConfig->pid);
-    fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->logFile);
-
-    // update the config
     amConfig->pid = -1;
-    if (writeConfig(amConfig, amConfig->configFile) != 0)
+    if (writeConfig(amConfig, amConfig->filename) != 0)
     {
-        fprintf(stderr, "error: could not update the config file after stopping daemon\n\n");
+        fprintf(stderr, "\nerror: could not update the config file after stopping daemon\n\n");
         return 1;
     }
     return 0;
 }
 
 /*
-   setAntman is used to set the watch directory
+   setAntman sets the watch directory
+    - checks the directory exists
+    - checks the directory is accessible
+    - updates the config
 */
 int setAntman(config_t *amConfig, char *dirName)
 {
-
-    // check directory exists and is accessible
     DIR *dir = opendir(dirName);
     if (dir)
     {
         closedir(dir);
-
-        // update the config and re-write the file
-        amConfig->watchDir = dirName;
-        if (writeConfig(amConfig, amConfig->configFile) != 0)
+        amConfig->watch_directory = dirName;
+        if (writeConfig(amConfig, amConfig->filename) != 0)
         {
-            fprintf(stderr, "error: failed to update config file with new watch directory\n\n");
+            fprintf(stderr, "\nerror: failed to update config file with new watch directory\n\n");
             return 1;
         }
+        return 0;
     }
     else if (ENOENT == errno)
     {
-        fprintf(stderr, "error: specified directory does not exist: %s\n\n", dirName);
+        fprintf(stderr, "\nerror: specified directory does not exist: %s\n\n", dirName);
         return 1;
     }
     else
     {
-        fprintf(stderr, "error: can't access the specified directory: %s\n\n", dirName);
+        fprintf(stderr, "\nerror: can't access the specified directory: %s\n\n", dirName);
         return 1;
     }
-    fprintf(stdout, "set the watch directory to: %s\n\n", amConfig->watchDir);
-    return 0;
 }
 
 /*
@@ -157,6 +132,14 @@ int main(int argc, char *argv[])
     char *watchDir = "";
     char *logFile = "";
 
+    // get a default log name
+    time_t timer;
+    time(&timer);
+    struct tm* tm_info;
+    tm_info = localtime(&timer);
+    static char defaultLog[28];    
+    strftime(defaultLog, 28, "./antman-%Y-%m-%d-%H%M.log", tm_info);
+
     // get the CLI info
     ketopt_t opt = KETOPT_INIT;
     int c;
@@ -175,7 +158,7 @@ int main(int argc, char *argv[])
         else if (c == 301) start = 1;
         else if (c == 302) stop = 1;
         else if (c == 303) opt.arg ? (watchDir = opt.arg) : (watchDir = AM_DEFAULT_WATCH_DIR);
-        else if (c == 304) opt.arg ? (logFile = opt.arg) : (logFile = getLogName());
+        else if (c == 304) opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
         
         else if (c == 305) getPID = 1;
         else if (c == 'u')
@@ -209,21 +192,21 @@ int main(int argc, char *argv[])
         config_t *tmp = initConfig();
         if (writeConfig(tmp, AM_DEFAULT_CONFIG) != 0)
         {
-            fprintf(stderr, "error: failed to create a config file - check permissions\n\n");
+            fprintf(stderr, "\nerror: failed to create a config file\n\n");
             return 1;
         }
         destroyConfig(tmp);
     }
     if (access(AM_DEFAULT_CONFIG, W_OK) == -1)
     {
-        fprintf(stderr, "error: failed to write to config file - check permissions\n\n");
+        fprintf(stderr, "\nerror: failed to write to config file - check permissions\n\n");
         return 1;
     }
     config_t *amConfig = initConfig();
     if (loadConfig(amConfig, AM_DEFAULT_CONFIG) != 0)
     {
         destroyConfig(amConfig);
-        fprintf(stderr, "error: failed to load config file\n\n");
+        fprintf(stderr, "\nerror: failed to load config file\n\n");
         return 1;
     }
 
@@ -248,11 +231,13 @@ int main(int argc, char *argv[])
     {
         if (daemonPID == -1)
         {
-            fprintf(stderr, "error: no daemon running, nothing to stop\n\n");
+            fprintf(stderr, "\nerror: no daemon running, nothing to stop\n\n");
             return 1;
         }
         if (stopAntman(amConfig) != 0)
             return 1;
+        fprintf(stdout, "\nsuccess: stopped the daemon process running on PID %d\n", daemonPID);
+        fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->current_log_file);
     }
 
     // handle any --setWatchDir request
@@ -260,36 +245,49 @@ int main(int argc, char *argv[])
     {
 
         // if the daemon is already running, stop it first
-        if (amConfig->pid >= 0)
+        if (daemonPID >= 0)
         {
             if (stopAntman(amConfig) != 0)
+            {
                 destroyConfig(amConfig);
                 return 1;
+            }
         }
+
+        // set the new watch directory
         if (setAntman(amConfig, watchDir) != 0)
+        {
             destroyConfig(amConfig);
             return 1;
+        }
+        fprintf(stdout, "\nsuccess: set the watch directory to %s\n", amConfig->watch_directory);
+
+        // restart the daemon if we stopped it
+        if (daemonPID >= 0) {
+            fprintf(stdout, "\t- restarting the antman daemon now\n\n");
+            start = 1;
+        }
     }
 
-    // handle any --start request (or issue a restart after --setWatchDir)
-    if (start == 1 || watchDir[0] != '\0')
+    // handle any --start request
+    if (start == 1)
     {
         if (amConfig->pid != -1)
         {
-            fprintf(stderr, "error: the daemon is already running on PID %d\n\n", amConfig->pid);
+            fprintf(stderr, "\nerror: the daemon is already running on PID %d\n\n", amConfig->pid);
             return 1;
         }
 
         // set up the log (use default log if no file provided)
         if (logFile[0] == '\0') {
-            logFile = getLogName();
+            logFile = defaultLog;
         }
-        amConfig->logFile = logFile;
+        amConfig->current_log_file = logFile;
         slog_init(logFile, "log/slog.cfg", 4, 1);
         slog(0, SLOG_INFO, "starting antman log (version: %s)", AM_VERSION);
         slog(0, SLOG_INFO, "\t- using config: %s", AM_DEFAULT_CONFIG);
         slog(0, SLOG_INFO, "preparing antman...");
-        slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watchDir);
+        slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
 
         // start the daemon
         if (startDaemon(amConfig) != 0) {
