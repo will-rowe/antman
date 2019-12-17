@@ -4,15 +4,12 @@ CLEANFILES =            libantman.a
 EXTRA_FLAGS =           -g -Wall -O2 -Wc++-compat
 LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
-default_config =        "/tmp/.antman.config"
-default_watch_dir =     "/var/lib/MinKNOW/data/reads"
-
 
 %.o : %.c
 		$(CC) -c $(CFLAGS) \
 		-DAM_VERSION=\"@VERSION@\" \
-		-DAM_DEFAULT_CONFIG=\"$(default_config)\" \
-		-DAM_DEFAULT_WATCH_DIR=\"$(default_watch_dir)\" \
+		-DCONFIG_LOCATION=\"@CONFIG_LOCATION@\" \
+		-DDEFAULT_WATCH_DIR=\"@DEFAULT_WATCH_DIR@\" \
 		$< -o $@
 
 libantman.a:$(OBJS)

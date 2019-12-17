@@ -635,6 +635,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+DEFAULT_WATCH_DIR
+CONFIG_LOCATION
 CPP
 LT_SYS_LIBRARY_PATH
 OTOOL64
@@ -12302,6 +12304,12 @@ _ACEOF
 else
   as_fn_error $? "Unable to find the fswatch library - supply with LDFLAGS." "$LINENO" 5
 fi
+
+
+# Add some defines for automake to give to antman
+CONFIG_LOCATION="/tmp/.antman.config"
+
+DEFAULT_WATCH_DIR="/var/lib/MinKNOW/data/reads"
 
 
 # Donzo

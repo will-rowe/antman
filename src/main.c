@@ -26,7 +26,7 @@ void printUsage(void)
            "\n"
            "\t -h                            \t prints this help and exits\n"
            "\t -v                            \t prints version number and exits\n",
-           AM_DEFAULT_WATCH_DIR);
+           DEFAULT_WATCH_DIR);
 }
 
 /*
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
         }
         else if (c == 301) start = 1;
         else if (c == 302) stop = 1;
-        else if (c == 303) opt.arg ? (watchDir = opt.arg) : (watchDir = AM_DEFAULT_WATCH_DIR);
+        else if (c == 303) opt.arg ? (watchDir = opt.arg) : (watchDir = DEFAULT_WATCH_DIR);
         else if (c == 304) opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
         
         else if (c == 305) getPID = 1;
@@ -186,24 +186,24 @@ int main(int argc, char *argv[])
     }
 
     // check the config exists and is accessible
-    if (access(AM_DEFAULT_CONFIG, F_OK) == -1)
+    if (access(CONFIG_LOCATION, F_OK) == -1)
     {
         // config doesn't exist, so create one
         config_t *tmp = initConfig();
-        if (writeConfig(tmp, AM_DEFAULT_CONFIG) != 0)
+        if (writeConfig(tmp, CONFIG_LOCATION) != 0)
         {
             fprintf(stderr, "\nerror: failed to create a config file\n\n");
             return 1;
         }
         destroyConfig(tmp);
     }
-    if (access(AM_DEFAULT_CONFIG, W_OK) == -1)
+    if (access(CONFIG_LOCATION, W_OK) == -1)
     {
         fprintf(stderr, "\nerror: failed to write to config file - check permissions\n\n");
         return 1;
     }
     config_t *amConfig = initConfig();
-    if (loadConfig(amConfig, AM_DEFAULT_CONFIG) != 0)
+    if (loadConfig(amConfig, CONFIG_LOCATION) != 0)
     {
         destroyConfig(amConfig);
         fprintf(stderr, "\nerror: failed to load config file\n\n");
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
         amConfig->current_log_file = logFile;
         slog_init(logFile, "log/slog.cfg", 4, 1);
         slog(0, SLOG_INFO, "starting antman log (version: %s)", AM_VERSION);
-        slog(0, SLOG_INFO, "\t- using config: %s", AM_DEFAULT_CONFIG);
+        slog(0, SLOG_INFO, "\t- using config: %s", CONFIG_LOCATION);
         slog(0, SLOG_INFO, "preparing antman...");
         slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
 

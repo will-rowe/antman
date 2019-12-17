@@ -13,7 +13,7 @@ config_t* initConfig() {
         c->created = NULL;
         c->modified = "";
         c->current_log_file = "";
-        c->watch_directory = AM_DEFAULT_WATCH_DIR;
+        c->watch_directory = DEFAULT_WATCH_DIR;
         c->pid = -1;
         c->k_size = AM_DEFAULT_K_SIZE;
         c->sketch_size = AM_DEFAULT_SKETCH_SIZE;
