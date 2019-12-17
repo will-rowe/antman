@@ -1,8 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <stdbool.h>
-
 #define AM_PROG_NAME "antman"
 #define AM_DEFAULT_K_SIZE 7
 #define AM_DEFAULT_SKETCH_SIZE 128
@@ -18,7 +16,6 @@ typedef struct config
     char *logFile;
     char *watchDir;
     int pid;
-    bool running;
     int k_size;
     int sketch_size;
     double bloom_fp_rate;

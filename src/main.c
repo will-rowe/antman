@@ -17,11 +17,11 @@
 char *getLogName()
 {
     time_t timer;
-    static char buffer[24];
+    static char buffer[28];
     struct tm* tm_info;
     time(&timer);
     tm_info = localtime(&timer);
-    strftime(buffer, 24, "./antman-%Y-%m-%d-%H%M", tm_info);
+    strftime(buffer, 28, "./antman-%Y-%m-%d-%H%M.log", tm_info);
     puts(buffer);
     return buffer;
 }
@@ -54,7 +54,7 @@ int checkPID(config_t *amConfig)
 {
 
     // if running, check the PID
-    if (amConfig->running)
+    if (amConfig->pid >= 0)
     {
         // check it exists
         if (kill(amConfig->pid, 0) != 0)
@@ -90,11 +90,11 @@ int stopAntman(config_t *amConfig)
 
     //TODO: instead of the above, use waitpid, then decide to use a SIGKILL and then harvest zombies
 
-    fprintf(stdout, "stopped the daemon process running on PID %d\n\n", amConfig->pid);
+    fprintf(stdout, "success: stopped the daemon process running on PID %d\n", amConfig->pid);
+    fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->logFile);
 
     // update the config
     amConfig->pid = -1;
-    amConfig->running = false;
     if (writeConfig(amConfig, amConfig->configFile) != 0)
     {
         fprintf(stderr, "error: could not update the config file after stopping daemon\n\n");
@@ -176,6 +176,7 @@ int main(int argc, char *argv[])
         else if (c == 302) stop = 1;
         else if (c == 303) opt.arg ? (watchDir = opt.arg) : (watchDir = AM_DEFAULT_WATCH_DIR);
         else if (c == 304) opt.arg ? (logFile = opt.arg) : (logFile = getLogName());
+        
         else if (c == 305) getPID = 1;
         else if (c == 'u')
             printf("unused flag:  -u %s\n", opt.arg);
@@ -259,7 +260,7 @@ int main(int argc, char *argv[])
     {
 
         // if the daemon is already running, stop it first
-        if (amConfig->running)
+        if (amConfig->pid >= 0)
         {
             if (stopAntman(amConfig) != 0)
                 destroyConfig(amConfig);

@@ -63,7 +63,7 @@ int startDaemon(config_t *amConfig)
 
     // try daemonising the program
     slog(0, SLOG_INFO, "launching daemon...");
-    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s.log", amConfig->logFile);
+    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s", amConfig->logFile);
     int res;
     if ((res = daemonize(AM_PROG_NAME, "NULL", NULL, NULL, NULL)) != 0)
     {
@@ -87,7 +87,6 @@ int startDaemon(config_t *amConfig)
     // update the config with the PID
     // TODO: this should probably be done in a lock file instead...
     amConfig->pid = pid;
-    amConfig->running = true;
     if (writeConfig(amConfig, amConfig->configFile) != 0)
     {
         slog(0, SLOG_ERROR, "failed to update config file");

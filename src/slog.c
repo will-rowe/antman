@@ -195,9 +195,9 @@ void slog_to_file(char *pStr, const char *pFile, SlogDate *pDate)
     memset(sFileName, 0, sizeof(sFileName));
 
     if (g_slogCfg.nFileStamp) 
-        snprintf(sFileName, sizeof(sFileName), "%s-%02d-%02d-%02d.log", pFile, pDate->year, pDate->mon, pDate->day);
+        snprintf(sFileName, sizeof(sFileName), "%s-%02d-%02d-%02d", pFile, pDate->year, pDate->mon, pDate->day);
     else 
-        snprintf(sFileName, sizeof(sFileName), "%s.log", pFile);
+        snprintf(sFileName, sizeof(sFileName), "%s", pFile);
 
     FILE *fp = fopen(sFileName, "a");
     if (fp == NULL) return;
