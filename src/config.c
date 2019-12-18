@@ -11,12 +11,12 @@ config_t *initConfig()
     config_t *c;
     if ((c = malloc(sizeof *c)) != NULL)
     {
-        c->filename = "";
+        c->filename = NULL;
         c->created = NULL;
-        c->modified = "";
-        c->current_log_file = "";
+        c->modified = NULL;
+        c->current_log_file = NULL;
         c->watch_directory = DEFAULT_WATCH_DIR;
-        c->white_list = "";
+        c->white_list = NULL;
         c->pid = -1;
         c->k_size = AM_DEFAULT_K_SIZE;
         c->sketch_size = AM_DEFAULT_SKETCH_SIZE;
@@ -48,7 +48,7 @@ int writeConfig(config_t *config, char *configFile)
     SlogDate date;
     slog_get_date(&date);
     char timeStamp[18];
-    int ret = snprintf(timeStamp, sizeof(timeStamp), "%d-%d-%d:%d%d", date.year, date.mon, date.day, date.hour, date.min);
+    int ret = snprintf(timeStamp, sizeof(timeStamp), "%d-%d-%d:%d-%d", date.year, date.mon, date.day, date.hour, date.min);
     if (ret > 18)
     {
         fprintf(stderr, "failed to format time stamp\n");
@@ -89,7 +89,18 @@ int loadConfig(config_t *config, char *configFile)
 {
 
     // create a stack allocated tmp config
-    config_t c = {.pid = -1, .k_size = 11};
+    config_t c = {
+        .filename = "",
+        .created = NULL,
+        .modified = "",
+        .current_log_file = "",
+        .watch_directory = DEFAULT_WATCH_DIR,
+        .white_list = "",
+        .pid = -1,
+        .k_size = AM_DEFAULT_K_SIZE,
+        .sketch_size = AM_DEFAULT_SKETCH_SIZE,
+        .bloom_fp_rate = AM_DEFAULT_BLOOM_FP_RATE,
+        .bloom_max_elements = AM_DEFAULT_BLOOM_MAX_EL};
 
     // read the file into a buffer
     char *content = json_fread(configFile);

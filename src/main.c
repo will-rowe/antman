@@ -260,8 +260,10 @@ int main(int argc, char *argv[])
             return 1;
         }
         if (stopAntman(amConfig) != 0)
+        {
             destroyConfig(amConfig);
-        return 1;
+            return 1;
+        }
         fprintf(stdout, "\nsuccess: stopped the daemon process running on PID %d\n", daemonPID);
         fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->current_log_file);
     }
@@ -299,7 +301,7 @@ int main(int argc, char *argv[])
                 destroyConfig(amConfig);
                 return 1;
             }
-            fprintf(stdout, "set the whitme list to %s\n", amConfig->white_list);
+            fprintf(stdout, "set the white list to %s\n", amConfig->white_list);
         }
 
         // set the log if requested
@@ -317,7 +319,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        // restart the daemon if we stopped it (--stop wasn't requested)
+        // restart the daemon if we stopped it (only if --stop wasn't also requested)
         if (daemonPID >= 0 && stop == 0)
         {
             fprintf(stdout, "\t- restarting the antman daemon now\n\n");
@@ -338,7 +340,7 @@ int main(int argc, char *argv[])
         }
 
         // check there is a white list stored in the config
-        if (amConfig->white_list[0] == '\0')
+        if (amConfig->white_list == NULL)
         {
             fprintf(stderr, "\nerror: no white list found (run `antman --setWhiteList=file.fna`)\n\n");
             destroyConfig(amConfig);
@@ -353,10 +355,11 @@ int main(int argc, char *argv[])
 
         // start logging
         slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
-        slog(0, SLOG_INFO, "starting antman log (version: %s)", AM_VERSION);
+        slog(0, SLOG_INFO, "starting antman (version: %s)", AM_VERSION);
         slog(0, SLOG_INFO, "\t- using config: %s", CONFIG_LOCATION);
-        slog(0, SLOG_INFO, "preparing antman...");
+        slog(0, SLOG_INFO, "\t- config last updated: %s", amConfig->modified);
         slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
+        slog(0, SLOG_INFO, "\t- white list: %s", amConfig->white_list);
 
         // start the daemon
         if (startDaemon(amConfig) != 0)

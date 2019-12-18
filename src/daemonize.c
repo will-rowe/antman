@@ -53,7 +53,7 @@ int startDaemon(config_t *amConfig)
 {
 
     // create a bloom filter for the reference sequence
-    slog(0, SLOG_INFO, "\t- loading white list: %s", amConfig->white_list);
+    slog(0, SLOG_INFO, "loading white list into bloom filter...");
     struct bloom refBF;
     bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
     processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
