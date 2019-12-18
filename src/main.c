@@ -18,14 +18,15 @@ void printUsage(void)
 {
     printf("usage:\tantman [flags]\n\n"
            "flags:\n"
-           "\t --start                       \t start the antman daemon\n"
-           "\t --stop                        \t stop the antman daemon\n"
-           "\t --setWatchDir <path>          \t set the watch directory (default: ./antman-YYYY-MM-DD-HHMM.log)\n"
-           "\t --setLog <path/filename>      \t set log file (default: %s)\n"
-           "\t --getPID                      \t return the PID of the antman daemon\n"
+           "\t --setWatchDir <path>                 \t set the watch directory (default: %s)\n"
+           "\t --setLog <=path/filename>            \t set log file (default: ./antman-YYYY-MM-DD-HHMM.log)\n"
+           "\t --setWhiteList <=path/filename>      \t set the white list\n"
+           "\t --start                              \t start the antman daemon\n"
+           "\t --stop                               \t stop the antman daemon\n"
+           "\t --getPID                             \t return the PID of the antman daemon\n"
            "\n"
-           "\t -h                            \t prints this help and exits\n"
-           "\t -v                            \t prints version number and exits\n",
+           "\t -h                                   \t prints this help and exits\n"
+           "\t -v                                   \t prints version number and exits\n",
            DEFAULT_WATCH_DIR);
 }
 
@@ -42,7 +43,7 @@ int checkPID(config_t *amConfig)
         if (kill(amConfig->pid, 0) != 0)
         {
             fprintf(stderr, "\nerror: the registered antman pid is not running\n\n");
-            return(-2);
+            return (-2);
         }
 
         // TODO: check it PID name is antman
@@ -135,9 +136,9 @@ int main(int argc, char *argv[])
     // get a default log name
     time_t timer;
     time(&timer);
-    struct tm* tm_info;
+    struct tm *tm_info;
     tm_info = localtime(&timer);
-    static char defaultLog[28];    
+    static char defaultLog[28];
     strftime(defaultLog, 28, "./antman-%Y-%m-%d-%H%M.log", tm_info);
 
     // get the CLI info
@@ -155,12 +156,17 @@ int main(int argc, char *argv[])
             printf("%s\n", AM_VERSION);
             return 0;
         }
-        else if (c == 301) start = 1;
-        else if (c == 302) stop = 1;
-        else if (c == 303) opt.arg ? (watchDir = opt.arg) : (watchDir = DEFAULT_WATCH_DIR);
-        else if (c == 304) opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
-        
-        else if (c == 305) getPID = 1;
+        else if (c == 301)
+            start = 1;
+        else if (c == 302)
+            stop = 1;
+        else if (c == 303)
+            opt.arg ? (watchDir = opt.arg) : (watchDir = DEFAULT_WATCH_DIR);
+        else if (c == 304)
+            opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
+
+        else if (c == 305)
+            getPID = 1;
         else if (c == 'u')
             printf("unused flag:  -u %s\n", opt.arg);
         else if (c == '?')
@@ -212,10 +218,10 @@ int main(int argc, char *argv[])
 
     // get the PID of the running antman daemon (returns -1 if no daemon is running)
     int daemonPID = checkPID(amConfig);
-    if (daemonPID == -2) 
+    if (daemonPID == -2)
     {
         destroyConfig(amConfig);
-        return 1; 
+        return 1;
     }
 
     // handle any --getPID request
@@ -263,7 +269,8 @@ int main(int argc, char *argv[])
         fprintf(stdout, "\nsuccess: set the watch directory to %s\n", amConfig->watch_directory);
 
         // restart the daemon if we stopped it
-        if (daemonPID >= 0) {
+        if (daemonPID >= 0)
+        {
             fprintf(stdout, "\t- restarting the antman daemon now\n\n");
             start = 1;
         }
@@ -278,24 +285,32 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        // set up the log (use default log if no file provided)
-        if (logFile[0] == '\0') {
-            logFile = defaultLog;
+        // set up the log - check if a --setLog was set and use it
+        if (logFile[0] != '\0')
+        {
+            amConfig->current_log_file = logFile;
         }
-        amConfig->current_log_file = logFile;
-        slog_init(logFile, "log/slog.cfg", 4, 1);
+
+        // if no log provided and there is no existing logfile, create a new default one
+        else if (amConfig->current_log_file[0] == '\0')
+        {
+            amConfig->current_log_file = defaultLog;
+        }
+
+        // start logging
+        slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
         slog(0, SLOG_INFO, "starting antman log (version: %s)", AM_VERSION);
         slog(0, SLOG_INFO, "\t- using config: %s", CONFIG_LOCATION);
         slog(0, SLOG_INFO, "preparing antman...");
         slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
 
         // start the daemon
-        if (startDaemon(amConfig) != 0) {
+        if (startDaemon(amConfig) != 0)
+        {
             return 1;
         }
         slog(0, SLOG_INFO, "donzo.");
     }
-
     destroyConfig(amConfig);
     return 0;
 }
