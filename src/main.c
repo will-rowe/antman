@@ -19,11 +19,11 @@ void printUsage(void)
     printf("usage:\tantman [flags]\n\n"
            "flags:\n"
            "\t --setWatchDir <path>                 \t set the watch directory (default: %s)\n"
-           "\t --setLog <=path/filename>            \t set log file (default: ./antman-YYYY-MM-DD-HHMM.log)\n"
            "\t --setWhiteList <=path/filename>      \t set the white list\n"
+           "\t --setLog <=path/filename>            \t set the log file\n"
            "\t --start                              \t start the antman daemon\n"
            "\t --stop                               \t stop the antman daemon\n"
-           "\t --getPID                             \t return the PID of the antman daemon\n"
+           "\t --getPID                             \t prints PID of the antman daemon and exits\n"
            "\n"
            "\t -h                                   \t prints this help and exits\n"
            "\t -v                                   \t prints version number and exits\n",
@@ -31,7 +31,7 @@ void printUsage(void)
 }
 
 /*
-  checkPID
+  checkPID returns the PID of the running daemon
    - checks if the antman daemon is running
    - then checks if the PID is correct (-2 if the PID isn't found)
    - returns the PID of the antman daemon (-1 if no daemon is running)
@@ -58,7 +58,7 @@ int checkPID(config_t *amConfig)
 }
 
 /*
-   stopAntman
+   stopAntman stops the daemon
     - issues SIGTERM to antman daemon
     - updates the config
 */
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir[0] == '\0'))
+    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0'))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
@@ -276,23 +276,30 @@ int main(int argc, char *argv[])
         }
     }
 
+    // handle any --setLog request
+    if (logFile[0] != '\0')
+    {
+        amConfig->current_log_file = logFile;
+        if (writeConfig(amConfig, amConfig->filename) != 0)
+        {
+            fprintf(stderr, "\nerror: could not update the config file with new log\n\n");
+            return 1;
+        }
+    }
+
     // handle any --start request
     if (start == 1)
     {
+
+        // check the daemon is not already running
         if (amConfig->pid != -1)
         {
             fprintf(stderr, "\nerror: the daemon is already running on PID %d\n\n", amConfig->pid);
             return 1;
         }
 
-        // set up the log - check if a --setLog was set and use it
-        if (logFile[0] != '\0')
-        {
-            amConfig->current_log_file = logFile;
-        }
-
-        // if no log provided and there is no existing logfile, create a new default one
-        else if (amConfig->current_log_file[0] == '\0')
+        // make sure there is a log
+        if (amConfig->current_log_file[0] == '\0')
         {
             amConfig->current_log_file = defaultLog;
         }
