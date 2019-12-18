@@ -18,7 +18,7 @@ void printUsage(void)
 {
     printf("usage:\tantman [flags]\n\n"
            "flags:\n"
-           "\t --setWatchDir <path>                 \t set the watch directory (default: %s)\n"
+           "\t --setWatchDir <=path>                 \t set the watch directory (default: %s)\n"
            "\t --setWhiteList <=path/filename>      \t set the white list\n"
            "\t --setLog <=path/filename>            \t set the log file\n"
            "\t --start                              \t start the antman daemon\n"
@@ -31,10 +31,13 @@ void printUsage(void)
 }
 
 /*
-  checkPID returns the PID of the running daemon
-   - checks if the antman daemon is running
-   - then checks if the PID is correct (-2 if the PID isn't found)
-   - returns the PID of the antman daemon (-1 if no daemon is running)
+    checkPID returns the PID of the running daemon
+    - checks if the antman daemon is running
+    - then checks if the PID is correct (-2 if the PID isn't found)
+    - returns the PID of the antman daemon (-1 if no daemon is running)
+
+    TODO: check if PID name is antman:
+        something like #ps -p $(./src/antman --getPID) -o comm=
 */
 int checkPID(config_t *amConfig)
 {
@@ -45,10 +48,6 @@ int checkPID(config_t *amConfig)
             fprintf(stderr, "\nerror: the registered antman pid is not running\n\n");
             return (-2);
         }
-
-        // TODO: check it PID name is antman
-        // something like #ps -p $(./src/antman --getPID) -o comm=
-
         return amConfig->pid;
     }
     else
@@ -58,9 +57,11 @@ int checkPID(config_t *amConfig)
 }
 
 /*
-   stopAntman stops the daemon
+    stopAntman stops the daemon
     - issues SIGTERM to antman daemon
     - updates the config
+
+    TODO: instead of using SIGTERM, use waitpid and then decide to use a SIGKILL before harvesting zombies
 */
 int stopAntman(config_t *amConfig)
 {
@@ -69,9 +70,6 @@ int stopAntman(config_t *amConfig)
         fprintf(stderr, "\nerror: could not kill the daemon process running on PID %d\n\n", amConfig->pid);
         return 1;
     }
-
-    //TODO: instead of the above, use waitpid, then decide to use a SIGKILL and then harvest zombies
-
     amConfig->pid = -1;
     if (writeConfig(amConfig, amConfig->filename) != 0)
     {
@@ -82,23 +80,17 @@ int stopAntman(config_t *amConfig)
 }
 
 /*
-   setAntman sets the watch directory
+    setWatchDir sets the watch directory
     - checks the directory exists
     - checks the directory is accessible
-    - updates the config
 */
-int setAntman(config_t *amConfig, char *dirName)
+int setWatchDir(config_t *amConfig, char *dirName)
 {
     DIR *dir = opendir(dirName);
     if (dir)
     {
         closedir(dir);
         amConfig->watch_directory = dirName;
-        if (writeConfig(amConfig, amConfig->filename) != 0)
-        {
-            fprintf(stderr, "\nerror: failed to update config file with new watch directory\n\n");
-            return 1;
-        }
         return 0;
     }
     else if (ENOENT == errno)
@@ -114,6 +106,18 @@ int setAntman(config_t *amConfig, char *dirName)
 }
 
 /*
+    setWhiteList sets the white list
+    - checks the file exists
+    - checks the file is accessible
+    - checks it is a multifasta
+*/
+int setWhiteList(config_t *amConfig, char *fileName)
+{
+
+    return 0;
+}
+
+/*
     main is the antman entry point
 */
 int main(int argc, char *argv[])
@@ -124,13 +128,15 @@ int main(int argc, char *argv[])
         {"start", ko_no_argument, 301},
         {"stop", ko_no_argument, 302},
         {"setWatchDir", ko_optional_argument, 303},
-        {"setLog", ko_optional_argument, 304},
-        {"getPID", ko_no_argument, 305},
+        {"setWhiteList", ko_optional_argument, 304},
+        {"setLog", ko_optional_argument, 305},
+        {"getPID", ko_no_argument, 306},
         {0, 0, 0}};
 
     // set up the job list
     int start = 0, stop = 0, getPID = 0;
     char *watchDir = "";
+    char *whiteList = "";
     char *logFile = "";
 
     // get a default log name
@@ -163,9 +169,15 @@ int main(int argc, char *argv[])
         else if (c == 303)
             opt.arg ? (watchDir = opt.arg) : (watchDir = DEFAULT_WATCH_DIR);
         else if (c == 304)
-            opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
-
+        {
+            if (opt.arg != NULL)
+            {
+                whiteList = opt.arg;
+            }
+        }
         else if (c == 305)
+            opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
+        else if (c == 306)
             getPID = 1;
         else if (c == 'u')
             printf("unused flag:  -u %s\n", opt.arg);
@@ -184,7 +196,7 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0'))
+    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0') && (whiteList[0] == '\0'))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
@@ -205,9 +217,11 @@ int main(int argc, char *argv[])
     }
     if (access(CONFIG_LOCATION, W_OK) == -1)
     {
-        fprintf(stderr, "\nerror: failed to write to config file - check permissions\n\n");
+        fprintf(stderr, "\nerror: failed to write to config file (check permissions)\n\n");
         return 1;
     }
+
+    // load the config
     config_t *amConfig = initConfig();
     if (loadConfig(amConfig, CONFIG_LOCATION) != 0)
     {
@@ -224,7 +238,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // handle any --getPID request
+    //
+    // READY TO START HANDLING REQUESTS
+    //
+
+    // handle any --getPID request (and then exit)
     if (getPID == 1)
     {
         printf("%d\n", daemonPID);
@@ -238,20 +256,22 @@ int main(int argc, char *argv[])
         if (daemonPID == -1)
         {
             fprintf(stderr, "\nerror: no daemon running, nothing to stop\n\n");
+            destroyConfig(amConfig);
             return 1;
         }
         if (stopAntman(amConfig) != 0)
-            return 1;
+            destroyConfig(amConfig);
+        return 1;
         fprintf(stdout, "\nsuccess: stopped the daemon process running on PID %d\n", daemonPID);
         fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->current_log_file);
     }
 
-    // handle any --setWatchDir request
-    if (watchDir[0] != '\0')
+    // handle any --setWatchDir, --setWhiteList or --setLog requests
+    if (watchDir[0] != '\0' || whiteList[0] != '\0' || logFile[0] != '\0')
     {
 
-        // if the daemon is already running, stop it first
-        if (daemonPID >= 0)
+        // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
+        if (daemonPID >= 0 && stop == 0)
         {
             if (stopAntman(amConfig) != 0)
             {
@@ -260,30 +280,48 @@ int main(int argc, char *argv[])
             }
         }
 
-        // set the new watch directory
-        if (setAntman(amConfig, watchDir) != 0)
+        // set the watch directory if requested
+        if (watchDir[0] != '\0')
         {
+            if (setWatchDir(amConfig, watchDir) != 0)
+            {
+                destroyConfig(amConfig);
+                return 1;
+            }
+            fprintf(stdout, "set the watch directory to %s\n", amConfig->watch_directory);
+        }
+
+        // set the whitelist if requested
+        if (whiteList[0] != '\0')
+        {
+            if (setWhiteList(amConfig, watchDir) != 0)
+            {
+                destroyConfig(amConfig);
+                return 1;
+            }
+            fprintf(stdout, "set the white list to %s\n", amConfig->watch_directory);
+        }
+
+        // set the log if requested
+        if (logFile[0] != '\0')
+        {
+            amConfig->current_log_file = logFile;
+            fprintf(stdout, "set the log file to %s\n", amConfig->current_log_file);
+        }
+
+        // update the config
+        if (writeConfig(amConfig, amConfig->filename) != 0)
+        {
+            fprintf(stderr, "\nerror: could not update the config file\n\n");
             destroyConfig(amConfig);
             return 1;
         }
-        fprintf(stdout, "\nsuccess: set the watch directory to %s\n", amConfig->watch_directory);
 
-        // restart the daemon if we stopped it
-        if (daemonPID >= 0)
+        // restart the daemon if we stopped it (--stop wasn't requested)
+        if (daemonPID >= 0 && stop == 0)
         {
             fprintf(stdout, "\t- restarting the antman daemon now\n\n");
             start = 1;
-        }
-    }
-
-    // handle any --setLog request
-    if (logFile[0] != '\0')
-    {
-        amConfig->current_log_file = logFile;
-        if (writeConfig(amConfig, amConfig->filename) != 0)
-        {
-            fprintf(stderr, "\nerror: could not update the config file with new log\n\n");
-            return 1;
         }
     }
 
@@ -295,10 +333,11 @@ int main(int argc, char *argv[])
         if (amConfig->pid != -1)
         {
             fprintf(stderr, "\nerror: the daemon is already running on PID %d\n\n", amConfig->pid);
+            destroyConfig(amConfig);
             return 1;
         }
 
-        // make sure there is a log
+        // make sure there is a log - create the default if needed
         if (amConfig->current_log_file[0] == '\0')
         {
             amConfig->current_log_file = defaultLog;
@@ -314,6 +353,7 @@ int main(int argc, char *argv[])
         // start the daemon
         if (startDaemon(amConfig) != 0)
         {
+            destroyConfig(amConfig);
             return 1;
         }
         slog(0, SLOG_INFO, "donzo.");
