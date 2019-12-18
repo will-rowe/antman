@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
         }
 
         // make sure there is a log - create the default if needed
-        if (amConfig->current_log_file[0] == '\0')
+        if (amConfig->current_log_file == NULL)
         {
             amConfig->current_log_file = defaultLog;
         }

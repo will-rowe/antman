@@ -41,26 +41,26 @@ except subprocess.CalledProcessError as e:
 print("checking daemonization...")
 # first make sure we can get pid
 try:
-    output3 = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
+    getPID = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to call `antman --getPID` (error code: {})." .format(errorCode))
 # next make sure it is -1 as antman shouldn't be running
-pid = output3.stdout.decode('utf-8').rstrip('\n')
+pid = getPID.stdout.decode('utf-8').rstrip('\n')
 if pid != "-1":
     sys.exit("---\nerror: antman daemon shouldn't have a PID yet (got: {})." .format(pid))
 # now start antman and get pid
 try:
-    output4 = subprocess.run(['antman', '--start'], stdout=subprocess.PIPE)
+    startAM = subprocess.run(['antman', '--start'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to start antman (error code: {})." .format(errorCode))
 try:
-    output5 = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
+    getPID2 = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to call `antman --getPID` (error code: {})." .format(errorCode))
-pid = output5.stdout.decode('utf-8').rstrip('\n')
+pid = getPID2.stdout.decode('utf-8').rstrip('\n')
 # check the PID is in use
 try:
     os.kill(int(pid), 0)
