@@ -4,5 +4,6 @@ site_author: Will Rowe
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Using ANTMAN: commands.md
   - The Configuration File: the-config.md
 theme: readthedocs
