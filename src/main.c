@@ -108,11 +108,15 @@ int setWatchDir(config_t *amConfig, char *dirName)
 /*
     setWhiteList sets the white list
     - checks the file exists
-    - checks the file is accessible
-    - checks it is a multifasta
+    - TODO: checks it is a multifasta
 */
 int setWhiteList(config_t *amConfig, char *fileName)
 {
+    if (access(fileName, F_OK) == -1)
+    {
+        fprintf(stderr, "\nerror: can't access file (%s)\n\n", fileName);
+        return 1;
+    }
     amConfig->white_list = fileName;
     return 0;
 }
