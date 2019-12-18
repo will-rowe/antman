@@ -29,6 +29,14 @@ with open('./VERSION') as f:
 if progVersion.rstrip('\n') != codeVersion:
     sys.exit("---\nerror: compiled version number does not match codebase ({} vs. {})." .format(progVersion.rstrip('\n'), codeVersion))
 
+# check --setWhiteList
+print("setting white list...")
+try:
+    setWhiteList = subprocess.run(['antman', '--setWhiteList=tests/NiV_6_Malaysia.fasta'], stdout=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
+    errorCode = e.returncode
+    sys.exit("---\nerror: failed to call `antman --setWhiteList=tests/NiV_6_Malaysia.fasta` (error code: {})." .format(errorCode))
+
 # check daemonization
 print("checking daemonization...")
 # first make sure we can get pid

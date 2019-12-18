@@ -337,6 +337,14 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        // check there is a white list stored in the config
+        if (amConfig->white_list[0] == '\0')
+        {
+            fprintf(stderr, "\nerror: no white list found (run `antman --setWhiteList=file.fna`)\n\n");
+            destroyConfig(amConfig);
+            return 1;
+        }
+
         // make sure there is a log - create the default if needed
         if (amConfig->current_log_file[0] == '\0')
         {

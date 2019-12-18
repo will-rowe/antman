@@ -53,13 +53,10 @@ int startDaemon(config_t *amConfig)
 {
 
     // create a bloom filter for the reference sequence
-    // TODO: collect the ref seq location from the amConfig
-    char *tmpFile = "/Users/willrowe/Google Drive/code/c/projects/antman/tests/NiV_6_Malaysia.fasta";
-    slog(0, SLOG_INFO, "\t- loading reference file: %s", tmpFile);
+    slog(0, SLOG_INFO, "\t- loading white list: %s", amConfig->white_list);
     struct bloom refBF;
     bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
-    processRef(tmpFile, &refBF, amConfig->k_size, amConfig->sketch_size);
-
+    processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
 
     // try daemonising the program
     slog(0, SLOG_INFO, "launching daemon...");
