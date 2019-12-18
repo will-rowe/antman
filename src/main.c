@@ -113,7 +113,7 @@ int setWatchDir(config_t *amConfig, char *dirName)
 */
 int setWhiteList(config_t *amConfig, char *fileName)
 {
-
+    amConfig->white_list = fileName;
     return 0;
 }
 
@@ -294,12 +294,12 @@ int main(int argc, char *argv[])
         // set the whitelist if requested
         if (whiteList[0] != '\0')
         {
-            if (setWhiteList(amConfig, watchDir) != 0)
+            if (setWhiteList(amConfig, whiteList) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
             }
-            fprintf(stdout, "set the white list to %s\n", amConfig->watch_directory);
+            fprintf(stdout, "set the whitme list to %s\n", amConfig->white_list);
         }
 
         // set the log if requested

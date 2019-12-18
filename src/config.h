@@ -19,6 +19,7 @@ typedef struct config
     char *modified;
     char *current_log_file;
     char *watch_directory;
+    char *white_list;
     int pid;
     int k_size;
     int sketch_size;
