@@ -7,8 +7,10 @@
 #include <unistd.h>
 
 #include "ketopt.h"
+#include "bloom.h"
 #include "config.h"
 #include "daemonize.h"
+#include "sequence.h"
 #include "slog.h"
 
 /*
@@ -375,6 +377,13 @@ int main(int argc, char *argv[])
         slog(0, SLOG_INFO, "\t- config last updated: %s", amConfig->modified);
         slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
         slog(0, SLOG_INFO, "\t- white list: %s", amConfig->white_list);
+
+        // load the white list into a bloom filter
+        slog(0, SLOG_INFO, "loading white list into bloom filter...");
+        struct bloom refBF;
+        bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
+        processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
+        amConfig->bloom = &refBF;
 
         // start the daemon
         if (startDaemon(amConfig) != 0)

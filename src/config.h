@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "bloom.h"
 #include "slog.h"
 
 #define AM_PROG_NAME "antman"
@@ -25,6 +26,7 @@ typedef struct config
     int sketch_size;
     double bloom_fp_rate;
     int bloom_max_elements;
+    struct bloom *bloom;
 } config_t;
 
 /*

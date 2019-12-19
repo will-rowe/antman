@@ -22,6 +22,7 @@ config_t *initConfig()
         c->sketch_size = AM_DEFAULT_SKETCH_SIZE;
         c->bloom_fp_rate = AM_DEFAULT_BLOOM_FP_RATE;
         c->bloom_max_elements = AM_DEFAULT_BLOOM_MAX_EL;
+        c->bloom = NULL;
     }
     return c;
 }
