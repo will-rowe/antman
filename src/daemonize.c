@@ -59,7 +59,7 @@ int startDaemon(config_t *amConfig)
     if ((res = daemonize(AM_PROG_NAME, "NULL", NULL, NULL, NULL)) != 0)
     {
         slog(0, SLOG_ERROR, "could not start the antman daemon");
-        exit(1);
+        return 1;
     }
 
     // divert log to file
@@ -81,7 +81,7 @@ int startDaemon(config_t *amConfig)
     if (writeConfig(amConfig, amConfig->filename) != 0)
     {
         slog(0, SLOG_ERROR, "failed to update config file");
-        exit(1);
+        return 1;
     }
 
     // launch the worker threads
@@ -104,7 +104,7 @@ int startDaemon(config_t *amConfig)
     if (FSW_OK != fsw_add_path(handle, amConfig->watch_directory))
     {
         slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watch_directory);
-        exit(1);
+        return 1;
     }
     slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watch_directory);
 
@@ -123,7 +123,7 @@ int startDaemon(config_t *amConfig)
     {
         free(wargs);
         slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
-        exit(1);
+        return 1;
     }
 
     // start the watcher on a new thread
@@ -132,7 +132,7 @@ int startDaemon(config_t *amConfig)
     {
         free(wargs);
         slog(0, SLOG_ERROR, "could not start the watcher thread");
-        exit(1);
+        return 1;
     }
     slog(0, SLOG_INFO, "antman is waiting for sequence data...");
 
@@ -148,14 +148,14 @@ int startDaemon(config_t *amConfig)
     {
         free(wargs);
         slog(0, SLOG_ERROR, "error stopping the directory watcher");
-        exit(1);
+        return 1;
     }
     sleep(5);
     if (FSW_OK != fsw_destroy_session(handle))
     {
         free(wargs);
         slog(0, SLOG_ERROR, "error destroying the fswatch session");
-        exit(1);
+        return 1;
     }
 
     // wait for the directory watcher thread to finish
@@ -163,7 +163,7 @@ int startDaemon(config_t *amConfig)
     {
         free(wargs);
         slog(0, SLOG_ERROR, "error joining directory watcher thread");
-        exit(1);
+        return 1;
     }
 
     // wait on any active threads in the workerpool
