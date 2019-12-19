@@ -48,6 +48,13 @@ int checkPID(config_t *amConfig)
         if (kill(amConfig->pid, 0) != 0)
         {
             fprintf(stderr, "\nerror: the registered antman pid is not running\n\n");
+            fprintf(stderr, "\t- updating config file\n");
+            amConfig->pid = -1;
+            if (writeConfig(amConfig, amConfig->filename) != 0)
+            {
+                fprintf(stderr, "\nerror: could not update the config file\n\n");
+                return 1;
+            }
             return (-2);
         }
         return amConfig->pid;
@@ -281,7 +288,7 @@ int main(int argc, char *argv[])
             destroyConfig(amConfig);
             return 1;
         }
-        fprintf(stdout, "\nsuccess: stopped the daemon process running on PID %d\n", daemonPID);
+        fprintf(stdout, "\nstopped the daemon process running on PID %d\n", daemonPID);
         fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->current_log_file);
     }
 
