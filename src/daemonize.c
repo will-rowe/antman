@@ -11,7 +11,6 @@
 #include "daemonize.h"
 #include "sequence.h"
 #include "slog.h"
-#include "watcher.h"
 #include "workerpool.h"
 
 // TODO: set these values by the cli
@@ -49,12 +48,11 @@ void *startWatching(void *param)
 }
 
 // startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
-int startDaemon(config_t *amConfig)
+int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
 {
 
     // try daemonising the program
-    slog(0, SLOG_INFO, "launching daemon...");
-    slog(0, SLOG_INFO, "\t- redirected antman log to file: %s", amConfig->current_log_file);
+    slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->current_log_file);
     int res;
     if ((res = daemonize(AM_PROG_NAME, "NULL", NULL, NULL, NULL)) != 0)
     {
@@ -71,9 +69,9 @@ int startDaemon(config_t *amConfig)
     slog_config_set(&slgCfg);
 
     // log some progress
-    slog(0, SLOG_INFO, "started the antman daemon");
+    slog(0, SLOG_INFO, "checking the antman daemon...");
     pid_t pid = getpid();
-    slog(0, SLOG_INFO, "\t- daemon pid: %d", pid);
+    slog(0, SLOG_LIVE, "\t- daemon pid: %d", pid);
 
     // update the config with the PID
     // TODO: this should probably be done in a lock file instead...
@@ -84,19 +82,16 @@ int startDaemon(config_t *amConfig)
         return 1;
     }
 
-    // launch the worker threads
-    tpool_t *wp;
-    wp = tpool_create(NUM_THREADS);
-    slog(0, SLOG_INFO, "\t- created workerpool of %d threads", NUM_THREADS);
-
     // set up the signal catcher
     catchSigterm();
 
-    // set up the watcher
+    // initialise fswatch
+    slog(0, SLOG_INFO, "initialising fswatch...");
     if (FSW_OK != fsw_init_library())
     {
-        slog(0, SLOG_INFO, "%s", fsw_last_error());
         slog(0, SLOG_ERROR, "fswatch cannot be initialised");
+        slog(0, SLOG_LIVE, "\t- %s", fsw_last_error());
+        return 1;
     }
     const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
 
@@ -106,22 +101,18 @@ int startDaemon(config_t *amConfig)
         slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watch_directory);
         return 1;
     }
-    slog(0, SLOG_INFO, "\t- added directory to the watch path: %s", amConfig->watch_directory);
+    slog(0, SLOG_LIVE, "\t- added directory to the watch path: %s", amConfig->watch_directory);
 
-    // set up the watcher arguments
-    watcherArgs_t *wargs = malloc(sizeof(watcherArgs_t));
-    if (wargs == NULL)
-        slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
+    // launch the worker threads
+    slog(0, SLOG_INFO, "creating workerpool...");
+    tpool_t *wp;
+    wp = tpool_create(NUM_THREADS);
+    slog(0, SLOG_LIVE, "\t- created workerpool of %d threads", NUM_THREADS);
     wargs->workerPool = wp;
-    wargs->bloomFilter = amConfig->bloom_filter;
-    wargs->k_size = amConfig->k_size;
-    wargs->sketch_size = amConfig->sketch_size;
-    wargs->fp_rate = amConfig->bloom_fp_rate;
 
     // set the watcher callback function
     if (FSW_OK != fsw_set_callback(handle, watcherCallback, wargs))
     {
-        free(wargs);
         slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
         return 1;
     }
@@ -130,7 +121,6 @@ int startDaemon(config_t *amConfig)
     pthread_t start_thread;
     if (pthread_create(&start_thread, NULL, startWatching, (void *)&handle))
     {
-        free(wargs);
         slog(0, SLOG_ERROR, "could not start the watcher thread");
         return 1;
     }
@@ -143,17 +133,15 @@ int startDaemon(config_t *amConfig)
     }
 
     // stop the directory watcher
-    slog(0, SLOG_INFO, "\t- stopping the directory watcher");
+    slog(0, SLOG_LIVE, "\t- stopping the directory watcher");
     if (FSW_OK != fsw_stop_monitor(handle))
     {
-        free(wargs);
         slog(0, SLOG_ERROR, "error stopping the directory watcher");
         return 1;
     }
     sleep(5);
     if (FSW_OK != fsw_destroy_session(handle))
     {
-        free(wargs);
         slog(0, SLOG_ERROR, "error destroying the fswatch session");
         return 1;
     }
@@ -161,20 +149,17 @@ int startDaemon(config_t *amConfig)
     // wait for the directory watcher thread to finish
     if (pthread_join(start_thread, NULL))
     {
-        free(wargs);
         slog(0, SLOG_ERROR, "error joining directory watcher thread");
         return 1;
     }
 
     // wait on any active threads in the workerpool
-    slog(0, SLOG_INFO, "\t- stopping the sketching threads");
+    slog(0, SLOG_LIVE, "\t- stopping the sketching threads");
     tpool_wait(wp);
 
     // destroy the workerpool
     tpool_destroy(wp);
 
-    // free some stuff
-    free(wargs);
     return 0;
 }
 

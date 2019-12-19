@@ -16,7 +16,7 @@ libantman.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
 
 bin_PROGRAMS = antman
-antman_SOURCES = main.c bloom.h config.h daemonize.h ketopt.h sequence.h slog.h
+antman_SOURCES = main.c bloom.h config.h daemonize.h ketopt.h sequence.h slog.h watcher.h
 antman_LDADD = libantman.a $(LD_ADD)
 
 

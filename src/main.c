@@ -12,6 +12,17 @@
 #include "daemonize.h"
 #include "sequence.h"
 #include "slog.h"
+#include "watcher.h"
+
+/*
+   greet prints the program name and version
+*/
+void greet()
+{
+    printf("=======================================================\n");
+    printf("ANTMAN (version: %s)\n", AM_VERSION);
+    printf("=======================================================\n");
+}
 
 /*
    printUsage prints the usage info for antman
@@ -47,12 +58,13 @@ int checkPID(config_t *amConfig)
     {
         if (kill(amConfig->pid, 0) != 0)
         {
-            fprintf(stderr, "\nerror: the registered antman pid is not running\n\n");
-            fprintf(stderr, "\t- updating config file\n");
+            slog(0, SLOG_ERROR, "the registered antman pid is not running");
+            slog(0, SLOG_LIVE, "\t- registered PID: %d", amConfig->pid);
+            slog(0, SLOG_INFO, "updating config file...");
             amConfig->pid = -1;
             if (writeConfig(amConfig, amConfig->filename) != 0)
             {
-                fprintf(stderr, "\nerror: could not update the config file\n\n");
+                slog(0, SLOG_ERROR, "could not update the config file");
                 return 1;
             }
             return (-2);
@@ -76,13 +88,14 @@ int stopAntman(config_t *amConfig)
 {
     if (kill(amConfig->pid, SIGTERM) != 0)
     {
-        fprintf(stderr, "\nerror: could not kill the daemon process running on PID %d\n\n", amConfig->pid);
+        slog(0, SLOG_ERROR, "could not kill the daemon process");
+        slog(0, SLOG_LIVE, "\t- registered PID: %d", amConfig->pid);
         return 1;
     }
     amConfig->pid = -1;
     if (writeConfig(amConfig, amConfig->filename) != 0)
     {
-        fprintf(stderr, "\nerror: could not update the config file after stopping daemon\n\n");
+        slog(0, SLOG_ERROR, "could not update the config file after stopping the daemon");
         return 1;
     }
     return 0;
@@ -104,12 +117,12 @@ int setWatchDir(config_t *amConfig, char *dirName)
     }
     else if (ENOENT == errno)
     {
-        fprintf(stderr, "\nerror: specified directory does not exist: %s\n\n", dirName);
+        slog(0, SLOG_ERROR, "specified directory does not exist: %s", dirName);
         return 1;
     }
     else
     {
-        fprintf(stderr, "\nerror: can't access the specified directory: %s\n\n", dirName);
+        slog(0, SLOG_ERROR, "can't access the specified directory: %s", dirName);
         return 1;
     }
 }
@@ -123,7 +136,7 @@ int setWhiteList(config_t *amConfig, char *fileName)
 {
     if (access(fileName, F_OK) == -1)
     {
-        fprintf(stderr, "\nerror: can't access file (%s)\n\n", fileName);
+        slog(0, SLOG_ERROR, "can't access white list file: %s", fileName);
         return 1;
     }
     amConfig->white_list = fileName;
@@ -262,10 +275,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    //
-    // READY TO START HANDLING REQUESTS
-    //
-
     // handle any --getPID request (and then exit)
     if (getPID == 1)
     {
@@ -274,22 +283,36 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // we've got a real job now, better greet the user
+    greet();
+
+    // start logging
+    slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
+    slog(0, SLOG_INFO, "reading config...");
+    slog(0, SLOG_LIVE, "\t- config: %s", CONFIG_LOCATION);
+    slog(0, SLOG_LIVE, "\t- last updated: %s", amConfig->modified);
+    slog(0, SLOG_LIVE, "\t- watch directory: %s", amConfig->watch_directory);
+    slog(0, SLOG_LIVE, "\t- white list: %s", amConfig->white_list);
+    slog(0, SLOG_LIVE, "\t- current log file: %s", amConfig->current_log_file);
+
     // handle any --stop request
     if (stop == 1)
     {
+        slog(0, SLOG_INFO, "stopping daemon...");
         if (daemonPID == -1)
         {
-            fprintf(stderr, "\nerror: no daemon running, nothing to stop\n\n");
+            slog(0, SLOG_ERROR, "no daemon running, nothing to stop");
             destroyConfig(amConfig);
             return 1;
         }
+        slog(0, SLOG_LIVE, "\t- PID %d", daemonPID);
         if (stopAntman(amConfig) != 0)
         {
             destroyConfig(amConfig);
             return 1;
         }
-        fprintf(stdout, "\nstopped the daemon process running on PID %d\n", daemonPID);
-        fprintf(stdout, "\t- view full log at: %s\n\n", amConfig->current_log_file);
+        slog(0, SLOG_INFO, "stopped the daemon");
+        slog(0, SLOG_LIVE, "\t- daemon log: %s", amConfig->current_log_file);
     }
 
     // handle any --setWatchDir, --setWhiteList or --setLog requests
@@ -309,36 +332,43 @@ int main(int argc, char *argv[])
         // set the watch directory if requested
         if (watchDir[0] != '\0')
         {
+            slog(0, SLOG_INFO, "setting watch directory...");
+            slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->watch_directory);
             if (setWatchDir(amConfig, watchDir) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
             }
-            fprintf(stdout, "set the watch directory to %s\n", amConfig->watch_directory);
+            slog(0, SLOG_LIVE, "\t done");
         }
 
         // set the whitelist if requested
         if (whiteList[0] != '\0')
         {
+            slog(0, SLOG_INFO, "setting white list...");
+            slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->white_list);
             if (setWhiteList(amConfig, whiteList) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
             }
-            fprintf(stdout, "set the white list to %s\n", amConfig->white_list);
+            slog(0, SLOG_LIVE, "\t done");
+
         }
 
         // set the log if requested
         if (logFile[0] != '\0')
         {
+            slog(0, SLOG_INFO, "setting log file...");
+            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
             amConfig->current_log_file = logFile;
-            fprintf(stdout, "set the log file to %s\n", amConfig->current_log_file);
+            slog(0, SLOG_LIVE, "\t done");
         }
 
         // update the config
         if (writeConfig(amConfig, amConfig->filename) != 0)
         {
-            fprintf(stderr, "\nerror: could not update the config file\n\n");
+            slog(0, SLOG_ERROR, "could not update the config file");
             destroyConfig(amConfig);
             return 1;
         }
@@ -346,7 +376,7 @@ int main(int argc, char *argv[])
         // restart the daemon if we stopped it (only if --stop wasn't also requested)
         if (daemonPID >= 0 && stop == 0)
         {
-            fprintf(stdout, "\t- restarting the antman daemon now\n\n");
+            slog(0, SLOG_INFO, "restarting the antman daemon now...");
             start = 1;
         }
     }
@@ -354,22 +384,7 @@ int main(int argc, char *argv[])
     // handle any --start request
     if (start == 1)
     {
-
-        // check the daemon is not already running
-        if (amConfig->pid != -1)
-        {
-            fprintf(stderr, "\nerror: the daemon is already running on PID %d\n\n", amConfig->pid);
-            destroyConfig(amConfig);
-            return 1;
-        }
-
-        // check there is a white list stored in the config
-        if (amConfig->white_list == NULL)
-        {
-            fprintf(stderr, "\nerror: no white list found (run `antman --setWhiteList=file.fna`)\n\n");
-            destroyConfig(amConfig);
-            return 1;
-        }
+        slog(0, SLOG_INFO, "checking antman...");
 
         // make sure there is a log - create the default if needed
         if (amConfig->current_log_file == NULL)
@@ -377,31 +392,69 @@ int main(int argc, char *argv[])
             amConfig->current_log_file = defaultLog;
         }
 
-        // start logging
-        slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
-        slog(0, SLOG_INFO, "starting antman (version: %s)", AM_VERSION);
-        slog(0, SLOG_INFO, "\t- using config: %s", CONFIG_LOCATION);
-        slog(0, SLOG_INFO, "\t- config last updated: %s", amConfig->modified);
-        slog(0, SLOG_INFO, "\t- directory to watch: %s", amConfig->watch_directory);
-        slog(0, SLOG_INFO, "\t- white list: %s", amConfig->white_list);
+        // check the daemon is not already running
+        if (amConfig->pid != -1)
+        {
+            slog(0, SLOG_ERROR, "the daemon is already running");
+            slog(0, SLOG_LIVE, "\t- current PID: %d", amConfig->pid);
+            destroyConfig(amConfig);
+            return 1;
+        }
+   
+        // check there is a watch directory and  white list stored in the config
+        if (amConfig->white_list == NULL)
+        {
+            slog(0, SLOG_ERROR, "no white list found");
+            slog(0, SLOG_LIVE, "\t- try `antman --setWhiteList=file.fna`");
+            destroyConfig(amConfig);
+            return 1;
+        }
+        if (amConfig->watch_directory == NULL)
+        {
+            slog(0, SLOG_ERROR, "no watch directory found");
+            slog(0, SLOG_LIVE, "\t- try `antman --setWatchDir=/path/to/dir`");
+            destroyConfig(amConfig);
+            return 1;
+        }
+        slog(0, SLOG_LIVE, "\t- ready");
 
         // load the white list into a bloom filter
         slog(0, SLOG_INFO, "loading white list into bloom filter...");
         struct bloom refBF;
         bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
         processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
+        slog(0, SLOG_LIVE, "\t done");
         amConfig->bloom_filter = &refBF;
 
-        // start the daemon
-        if (startDaemon(amConfig) != 0)
+        // set up the watch directory
+        slog(0, SLOG_INFO, "setting up the directory watcher...");
+        watcherArgs_t *wargs = malloc(sizeof(watcherArgs_t));
+        if (wargs == NULL)
         {
+            slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
+            return 1;
+        }
+        wargs->bloomFilter = amConfig->bloom_filter;
+        wargs->k_size = amConfig->k_size;
+        wargs->sketch_size = amConfig->sketch_size;
+        wargs->fp_rate = amConfig->bloom_fp_rate;
+
+        slog(0, SLOG_LIVE, "\t done");
+
+        // start the daemon
+        slog(0, SLOG_INFO, "starting the daemon...");
+        if (startDaemon(amConfig, wargs) != 0)
+        {
+            free(wargs);
             bloom_free(&refBF);
             destroyConfig(amConfig);
             return 1;
         }
-        slog(0, SLOG_INFO, "donzo.");
     }
+
+    // end of play
     destroyConfig(amConfig);
+    slog(0, SLOG_INFO, "that's all folks");
     return 0;
 }
 

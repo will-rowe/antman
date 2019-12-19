@@ -29,17 +29,17 @@ void processRef(char *filepath, struct bloom *bf, int kSize, int sketchSize)
         // add the reference k-mers to the bloom filter
         sketchSequence(seq->seq.s, l, kSize, sketchSize, bf, NULL);
 
-        slog(0, SLOG_INFO, "\t- processed sequence");
-        slog(0, SLOG_INFO, "\t\t* sequence: %s", seq->name.s);
-        slog(0, SLOG_INFO, "\t\t* length: %d", l);
-        slog(0, SLOG_INFO, "\t\t* %d-mers: %d", kSize, (l - kSize + 1));
+        slog(0, SLOG_LIVE, "\t- processed sequence");
+        slog(0, SLOG_LIVE, "\t\t* sequence: %s", seq->name.s);
+        slog(0, SLOG_LIVE, "\t\t* length: %d", l);
+        slog(0, SLOG_LIVE, "\t\t* %d-mers: %d", kSize, (l - kSize + 1));
     }
     kseq_destroy(seq);
 
     // check for EOF
     if (l != -1)
     {
-        slog(0, SLOG_ERROR, "EOF error for reference file: %d\n", l);
+        slog(0, SLOG_ERROR, "EOF error for reference file: %d", l);
     }
     gzclose(fp);
     return;
@@ -73,7 +73,7 @@ void processFastq(void *args)
             exit(1);
         }
         sketchSequence(seq->seq.s, l, wargs->k_size, wargs->sketch_size, NULL, sketch);
-        slog(0, SLOG_INFO, "\t- [sketcher]:\tsketched a %dbp sequence", l);
+        slog(0, SLOG_LIVE, "\t- [sketcher]:\tsketched a %dbp sequence", l);
 
         // estimate read containment within the reference
         // lock the thread whilst using the bloom filter
@@ -98,7 +98,7 @@ void processFastq(void *args)
 
         double jaccardEst = ((double)(queryTotalKmers * containmentEstimate)) / ((queryTotalKmers + refTotalKmers) - (queryTotalKmers * containmentEstimate));
 
-        slog(0, SLOG_INFO, "\t- [sketcher]:\tjaccardEst by containment = %f", jaccardEst);
+        slog(0, SLOG_LIVE, "\t- [sketcher]:\tjaccardEst by containment = %f", jaccardEst);
 
         free(sketch);
     }

@@ -62,17 +62,17 @@ void watcherCallback(fsw_cevent const *const events, const unsigned int event_nu
             // use the bitmask to determine how to handle the event
             if ((setFlags & fileCheckList) == fileCheckList)
             {
-                slog(0, SLOG_INFO, "\t- [watcher]:\tfound a FASTQ file: %s", e->path);
+                slog(0, SLOG_LIVE, "\t- [watcher]:\tfound a FASTQ file: %s", e->path);
             }
             else
             {
                 if ((setFlags & 1 << 3) == 1 << 3)
                 {
-                    slog(0, SLOG_INFO, "\t- [watcher]:\tignoring a deleted file");
+                    slog(0, SLOG_LIVE, "\t- [watcher]:\tignoring a deleted file");
                 }
                 else
                 {
-                    slog(0, SLOG_INFO, "\t- [watcher]:\tignoring a file modification"); // TODO: is this catch right?
+                    slog(0, SLOG_LIVE, "\t- [watcher]:\tignoring a file modification"); // TODO: is this catch right?
                 }
                 continue;
             }
