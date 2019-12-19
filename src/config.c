@@ -118,6 +118,7 @@ int loadConfig(config_t *config, char *configFile)
                             &c.sketch_size,
                             &c.bloom_fp_rate,
                             &c.bloom_max_elements);
+    free(content);
 
     // check for error in json scan (-1 == error, 0 == no elements found, >0 == elements parsed)
     if (status < 1)
