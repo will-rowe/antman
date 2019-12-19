@@ -113,7 +113,7 @@ int startDaemon(config_t *amConfig)
     if (wargs == NULL)
         slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
     wargs->workerPool = wp;
-    wargs->bloomFilter = amConfig->bloom;
+    wargs->bloomFilter = amConfig->bloom_filter;
     wargs->k_size = amConfig->k_size;
     wargs->sketch_size = amConfig->sketch_size;
     wargs->fp_rate = amConfig->bloom_fp_rate;
@@ -121,6 +121,7 @@ int startDaemon(config_t *amConfig)
     // set the watcher callback function
     if (FSW_OK != fsw_set_callback(handle, watcherCallback, wargs))
     {
+        free(wargs);
         slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
         exit(1);
     }
@@ -129,6 +130,7 @@ int startDaemon(config_t *amConfig)
     pthread_t start_thread;
     if (pthread_create(&start_thread, NULL, startWatching, (void *)&handle))
     {
+        free(wargs);
         slog(0, SLOG_ERROR, "could not start the watcher thread");
         exit(1);
     }
@@ -144,12 +146,14 @@ int startDaemon(config_t *amConfig)
     slog(0, SLOG_INFO, "\t- stopping the directory watcher");
     if (FSW_OK != fsw_stop_monitor(handle))
     {
+        free(wargs);
         slog(0, SLOG_ERROR, "error stopping the directory watcher");
         exit(1);
     }
     sleep(5);
     if (FSW_OK != fsw_destroy_session(handle))
     {
+        free(wargs);
         slog(0, SLOG_ERROR, "error destroying the fswatch session");
         exit(1);
     }
@@ -157,6 +161,7 @@ int startDaemon(config_t *amConfig)
     // wait for the directory watcher thread to finish
     if (pthread_join(start_thread, NULL))
     {
+        free(wargs);
         slog(0, SLOG_ERROR, "error joining directory watcher thread");
         exit(1);
     }
@@ -169,7 +174,6 @@ int startDaemon(config_t *amConfig)
     tpool_destroy(wp);
 
     // free some stuff
-    bloom_free(amConfig->bloom);
     free(wargs);
     return 0;
 }

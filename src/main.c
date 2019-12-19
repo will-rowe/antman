@@ -383,11 +383,12 @@ int main(int argc, char *argv[])
         struct bloom refBF;
         bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
         processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
-        amConfig->bloom = &refBF;
+        amConfig->bloom_filter = &refBF;
 
         // start the daemon
         if (startDaemon(amConfig) != 0)
         {
+            bloom_free(&refBF);
             destroyConfig(amConfig);
             return 1;
         }
@@ -396,3 +397,10 @@ int main(int argc, char *argv[])
     destroyConfig(amConfig);
     return 0;
 }
+
+/*
+to do -
+if keeping bloom filter, add the free to the destroyConfig function
+
+lots of calls to free(wargs) - could create that here and pass to daemonise, so only one free needed on error
+*/

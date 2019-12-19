@@ -26,7 +26,7 @@ typedef struct config
     int sketch_size;
     double bloom_fp_rate;
     int bloom_max_elements;
-    struct bloom *bloom;
+    struct bloom *bloom_filter;
 } config_t;
 
 /*
