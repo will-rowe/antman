@@ -91,12 +91,12 @@ int loadConfig(config_t *config, char *configFile)
 
     // create a stack allocated tmp config
     config_t c = {
-        .filename = "",
+        .filename = NULL,
         .created = NULL,
-        .modified = "",
-        .current_log_file = "",
+        .modified = NULL,
+        .current_log_file = NULL,
         .watch_directory = DEFAULT_WATCH_DIR,
-        .white_list = "",
+        .white_list = NULL,
         .pid = -1,
         .k_size = AM_DEFAULT_K_SIZE,
         .sketch_size = AM_DEFAULT_SKETCH_SIZE,

@@ -161,9 +161,9 @@ int main(int argc, char *argv[])
 
     // set up the job list
     int start = 0, stop = 0, getPID = 0;
-    char *watchDir = "";
-    char *whiteList = "";
-    char *logFile = "";
+    char *watchDir = NULL;
+    char *whiteList = NULL;
+    char *logFile = NULL;
 
     // get a default log name
     time_t timer;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0') && (whiteList[0] == '\0'))
+    if (start + stop + getPID == 0 && (watchDir = NULL) && (logFile == NULL) && (whiteList == NULL))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
@@ -287,7 +287,13 @@ int main(int argc, char *argv[])
     greet();
 
     // start logging
-    slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
+    if (amConfig->current_log_file == NULL) {
+        slog_init(defaultLog, "log/slog.cfg", 4, 1);
+    }
+    else
+    {
+        slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
+    }
     slog(0, SLOG_INFO, "reading config...");
     slog(0, SLOG_LIVE, "\t- config: %s", CONFIG_LOCATION);
     slog(0, SLOG_LIVE, "\t- last updated: %s", amConfig->modified);
@@ -316,7 +322,7 @@ int main(int argc, char *argv[])
     }
 
     // handle any --setWatchDir, --setWhiteList or --setLog requests
-    if (watchDir[0] != '\0' || whiteList[0] != '\0' || logFile[0] != '\0')
+    if (watchDir != NULL || whiteList != NULL || logFile != NULL)
     {
 
         // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
@@ -330,7 +336,7 @@ int main(int argc, char *argv[])
         }
 
         // set the watch directory if requested
-        if (watchDir[0] != '\0')
+        if (watchDir != NULL)
         {
             slog(0, SLOG_INFO, "setting watch directory...");
             slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->watch_directory);
@@ -343,7 +349,7 @@ int main(int argc, char *argv[])
         }
 
         // set the whitelist if requested
-        if (whiteList[0] != '\0')
+        if (whiteList != NULL)
         {
             slog(0, SLOG_INFO, "setting white list...");
             slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->white_list);
@@ -357,7 +363,7 @@ int main(int argc, char *argv[])
         }
 
         // set the log if requested
-        if (logFile[0] != '\0')
+        if (logFile != NULL)
         {
             slog(0, SLOG_INFO, "setting log file...");
             slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
