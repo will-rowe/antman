@@ -454,11 +454,13 @@ int main(int argc, char *argv[])
             destroyConfig(amConfig);
             return 1;
         }
+
+        // daemon has been killed
+        free(wargs);
+        bloom_free(&refBF);
     }
 
-    // end of play
-    free(wargs);
-    bloom_free(&refBF);
+    // end of play - no more requests
     destroyConfig(amConfig);
     slog(0, SLOG_INFO, "that's all folks");
     return 0;
