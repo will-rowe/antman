@@ -42,7 +42,7 @@ void *startWatching(void *param)
     FSW_HANDLE *handle = (FSW_HANDLE *)param;
     if (FSW_OK != fsw_start_monitor(*handle))
     {
-        slog(0, SLOG_ERROR, "error creating thread for directory watcher");
+        slog(0, SLOG_ERROR, "could not start fswatch monitor");
         exit(1);
     }
     return NULL;
