@@ -161,9 +161,9 @@ int main(int argc, char *argv[])
 
     // set up the job list
     int start = 0, stop = 0, getPID = 0;
-    char *watchDir = NULL;
-    char *whiteList = NULL;
-    char *logFile = NULL;
+    char *watchDir = "";
+    char *whiteList = "";
+    char *logFile = "";
 
     // get a default log name
     time_t timer;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir = NULL) && (logFile == NULL) && (whiteList == NULL))
+    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0') && (whiteList[0] == '\0'))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
@@ -296,7 +296,8 @@ int main(int argc, char *argv[])
     }
     slog(0, SLOG_INFO, "reading config...");
     slog(0, SLOG_LIVE, "\t- config: %s", CONFIG_LOCATION);
-    slog(0, SLOG_LIVE, "\t- last updated: %s", amConfig->modified);
+    slog(0, SLOG_LIVE, "\t- created on: %s", amConfig->created);
+    slog(0, SLOG_LIVE, "\t- modified on: %s", amConfig->modified);
     slog(0, SLOG_LIVE, "\t- watch directory: %s", amConfig->watch_directory);
     slog(0, SLOG_LIVE, "\t- white list: %s", amConfig->white_list);
     slog(0, SLOG_LIVE, "\t- current log file: %s", amConfig->current_log_file);
@@ -322,7 +323,7 @@ int main(int argc, char *argv[])
     }
 
     // handle any --setWatchDir, --setWhiteList or --setLog requests
-    if (watchDir != NULL || whiteList != NULL || logFile != NULL)
+    if (watchDir[0] != '\0' || whiteList[0] != '\0' || logFile[0] != '\0')
     {
 
         // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
@@ -336,39 +337,36 @@ int main(int argc, char *argv[])
         }
 
         // set the watch directory if requested
-        if (watchDir != NULL)
+        if (watchDir[0] != '\0')
         {
             slog(0, SLOG_INFO, "setting watch directory...");
-            slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->watch_directory);
             if (setWatchDir(amConfig, watchDir) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
             }
-            slog(0, SLOG_LIVE, "\t done");
+            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->watch_directory);
         }
 
         // set the whitelist if requested
-        if (whiteList != NULL)
+        if (whiteList[0] != '\0')
         {
             slog(0, SLOG_INFO, "setting white list...");
-            slog(0, SLOG_LIVE, "\t- changing to: %s", amConfig->white_list);
             if (setWhiteList(amConfig, whiteList) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
             }
-            slog(0, SLOG_LIVE, "\t done");
+            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->white_list);
 
         }
 
         // set the log if requested
-        if (logFile != NULL)
+        if (logFile[0] != '\0')
         {
             slog(0, SLOG_INFO, "setting log file...");
-            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
             amConfig->current_log_file = logFile;
-            slog(0, SLOG_LIVE, "\t done");
+            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
         }
 
         // update the config
