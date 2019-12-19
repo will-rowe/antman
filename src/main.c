@@ -212,8 +212,14 @@ int main(int argc, char *argv[])
     {
         // config doesn't exist, so create one
         config_t *tmp = initConfig();
+        if (tmp == 0)
+        {
+            fprintf(stderr, "\nerror: failed to create a config file (out of memory)\n\n");
+            return 1;
+        }
         if (writeConfig(tmp, CONFIG_LOCATION) != 0)
         {
+            destroyConfig(tmp);
             fprintf(stderr, "\nerror: failed to create a config file\n\n");
             return 1;
         }
@@ -227,6 +233,11 @@ int main(int argc, char *argv[])
 
     // load the config
     config_t *amConfig = initConfig();
+    if (amConfig == 0)
+    {
+        fprintf(stderr, "\nerror: failed to load config file (out of memory)\n\n");
+        return 1;
+    }
     if (loadConfig(amConfig, CONFIG_LOCATION) != 0)
     {
         destroyConfig(amConfig);
