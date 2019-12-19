@@ -436,14 +436,14 @@ int main(int argc, char *argv[])
         if (wargs == NULL)
         {
             slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
+            bloom_free(&refBF);
+            destroyConfig(amConfig);
             return 1;
         }
         wargs->bloomFilter = amConfig->bloom_filter;
         wargs->k_size = amConfig->k_size;
         wargs->sketch_size = amConfig->sketch_size;
         wargs->fp_rate = amConfig->bloom_fp_rate;
-
-        slog(0, SLOG_LIVE, "\t done");
 
         // start the daemon
         slog(0, SLOG_INFO, "starting the daemon...");
@@ -457,6 +457,8 @@ int main(int argc, char *argv[])
     }
 
     // end of play
+    free(wargs);
+    bloom_free(&refBF);
     destroyConfig(amConfig);
     slog(0, SLOG_INFO, "that's all folks");
     return 0;
