@@ -30,12 +30,6 @@ config_t *initConfig()
 // destroyConfig
 void destroyConfig(config_t *config)
 {
-    free(config->filename);
-    free(config->created);
-    free(config->modified);
-    free(config->current_log_file);
-    free(config->watch_directory);
-    free(config->white_list);
     free(config);
     config = NULL;
 }
@@ -95,17 +89,25 @@ int writeConfig(config_t *config, char *configFile)
 int loadConfig(config_t *config, char *configFile)
 {
 
+    // set up some string vars to capture the json content
+    char *filename = NULL;
+    char *created = NULL;
+    char *modified = NULL;
+    char *current_log_file = NULL;
+    char *watch_directory = DEFAULT_WATCH_DIR;
+    char *white_list = NULL;
+
     // read the file into a buffer
     char *content = json_fread(configFile);
 
     // scan the file content and populate the tmp config
     int status = json_scanf(content, strlen(content), "{ filename: %Q, created: %Q, modified: %Q, current_log_file: %Q, watch_directory: %Q, white_list: %Q, pid: %d, k_size: %d, sketch_size: %d, bloom_fp_rate: %f, bloom_max_elements: %d }",
-                            &config->filename,
-                            &config->created,
-                            &config->modified,
-                            &config->current_log_file,
-                            &config->watch_directory,
-                            &config->white_list,
+                            &filename,
+                            &created,
+                            &modified,
+                            &current_log_file,
+                            &watch_directory,
+                            &white_list,
                             &config->pid,
                             &config->k_size,
                             &config->sketch_size,
@@ -119,6 +121,38 @@ int loadConfig(config_t *config, char *configFile)
     if (status < 1)
     {
         return 1;
+    }
+
+    // copy over the string content to our config and free the holders
+    if (filename)
+    {
+        config->filename = strdup(filename);
+        free(filename);
+    }
+    if (created)
+    {
+        config->created = strdup(created);
+        free(created);
+    }
+    if (modified)
+    {
+        config->modified = strdup(modified);
+        free(modified);
+    }
+    if (current_log_file)
+    {
+        config->current_log_file = strdup(current_log_file);
+        free(current_log_file);
+    }
+    if (watch_directory)
+    {
+        config->watch_directory = strdup(watch_directory);
+        free(watch_directory);
+    }
+    if (white_list)
+    {
+        config->white_list = strdup(white_list);
+        free(white_list);
     }
     return 0;
 }

@@ -489,7 +489,7 @@ lots of calls to free(wargs) - could create that here and pass to daemonise, so 
 /*
 antman --start has no leaks, because the program doesn't terminate.
 
-Anything that terminates (stop, setWatchDir etc.) and that creates a log, results in a leak:
+Anything that terminates (stop, setWatchDir etc.) and that creates a log, results a leak:
 
 ==20750== 120 bytes in 6 blocks are definitely lost in loss record 1 of 2
 ==20750==    at 0x4C30EFF: malloc (in /home/linuxbrew/.linuxbrew/Cellar/valgrind/3.15.0_1/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
