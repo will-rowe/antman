@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS =      foreign
 SUBDIRS=                unit-tests
 CLEANFILES =            libantman.a
-EXTRA_FLAGS =           -std=c11 -Wall -O2 -ggdb3 
+EXTRA_FLAGS =           -std=gnu99 -Wall -O2 -ggdb3 
 LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
 
