@@ -1,12 +1,12 @@
 AUTOMAKE_OPTIONS =      foreign
 SUBDIRS=                unit-tests
 CLEANFILES =            libantman.a
-EXTRA_FLAGS =           -std=c11 -Wall -O2 -Wc++-compat -ggdb3
+EXTRA_FLAGS =           -std=c11 -Wall -O2 -ggdb3 
 LD_ADD =                -lpthread -lm -lz -lfswatch
 OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o murmurhash2.o sequence.o sketch.o slog.o watcher.o workerpool.o
 
 %.o : %.c
-		$(CC) -c $(CFLAGS) \
+		$(CC) -c $(CFLAGS) $(EXTRA_FLAGS) \
 		-DAM_VERSION=\"@VERSION@\" \
 		-DCONFIG_LOCATION=\"@CONFIG_LOCATION@\" \
 		-DDEFAULT_WATCH_DIR=\"@DEFAULT_WATCH_DIR@\" \

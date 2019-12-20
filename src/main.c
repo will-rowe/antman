@@ -287,7 +287,8 @@ int main(int argc, char *argv[])
     greet();
 
     // start logging
-    if (amConfig->current_log_file == NULL) {
+    if (amConfig->current_log_file == NULL)
+    {
         slog_init(defaultLog, "log/slog.cfg", 4, 1);
     }
     else
@@ -301,6 +302,14 @@ int main(int argc, char *argv[])
     slog(0, SLOG_LIVE, "\t- watch directory: %s", amConfig->watch_directory);
     slog(0, SLOG_LIVE, "\t- white list: %s", amConfig->white_list);
     slog(0, SLOG_LIVE, "\t- current log file: %s", amConfig->current_log_file);
+    if (daemonPID != -1)
+    {
+        slog(0, SLOG_LIVE, "\t- daemon running: true");
+    }
+    else
+    {
+        slog(0, SLOG_LIVE, "\t- daemon running: false");
+    }
 
     // handle any --stop request
     if (stop == 1)
@@ -329,6 +338,7 @@ int main(int argc, char *argv[])
         // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
         if (daemonPID >= 0 && stop == 0)
         {
+            slog(0, SLOG_INFO, "stopping daemon...");
             if (stopAntman(amConfig) != 0)
             {
                 destroyConfig(amConfig);
@@ -358,7 +368,6 @@ int main(int argc, char *argv[])
                 return 1;
             }
             slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->white_list);
-
         }
 
         // set the log if requested
@@ -404,7 +413,7 @@ int main(int argc, char *argv[])
             destroyConfig(amConfig);
             return 1;
         }
-   
+
         // check there is a watch directory and  white list stored in the config
         if (amConfig->white_list == NULL)
         {
@@ -471,4 +480,7 @@ to do -
 if keeping bloom filter, add the free to the destroyConfig function
 
 lots of calls to free(wargs) - could create that here and pass to daemonise, so only one free needed on error
+ - have moved this to main but ended up with more leaks....
+
+ move back tomorrow
 */
