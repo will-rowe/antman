@@ -30,6 +30,12 @@ config_t *initConfig()
 // destroyConfig
 void destroyConfig(config_t *config)
 {
+    free(config->filename);
+    free(config->created);
+    free(config->modified);
+    free(config->current_log_file);
+    free(config->watch_directory);
+    free(config->white_list);
     free(config);
     config = NULL;
 }
