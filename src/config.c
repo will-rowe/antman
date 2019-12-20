@@ -89,36 +89,24 @@ int writeConfig(config_t *config, char *configFile)
 int loadConfig(config_t *config, char *configFile)
 {
 
-    // create a stack allocated tmp config
-    config_t c = {
-        .filename = NULL,
-        .created = NULL,
-        .modified = NULL,
-        .current_log_file = NULL,
-        .watch_directory = DEFAULT_WATCH_DIR,
-        .white_list = NULL,
-        .pid = -1,
-        .k_size = AM_DEFAULT_K_SIZE,
-        .sketch_size = AM_DEFAULT_SKETCH_SIZE,
-        .bloom_fp_rate = AM_DEFAULT_BLOOM_FP_RATE,
-        .bloom_max_elements = AM_DEFAULT_BLOOM_MAX_EL};
-
     // read the file into a buffer
     char *content = json_fread(configFile);
 
     // scan the file content and populate the tmp config
     int status = json_scanf(content, strlen(content), "{ filename: %Q, created: %Q, modified: %Q, current_log_file: %Q, watch_directory: %Q, white_list: %Q, pid: %d, k_size: %d, sketch_size: %d, bloom_fp_rate: %f, bloom_max_elements: %d }",
-                            &c.filename,
-                            &c.created,
-                            &c.modified,
-                            &c.current_log_file,
-                            &c.watch_directory,
-                            &c.white_list,
-                            &c.pid,
-                            &c.k_size,
-                            &c.sketch_size,
-                            &c.bloom_fp_rate,
-                            &c.bloom_max_elements);
+                            &config->filename,
+                            &config->created,
+                            &config->modified,
+                            &config->current_log_file,
+                            &config->watch_directory,
+                            &config->white_list,
+                            &config->pid,
+                            &config->k_size,
+                            &config->sketch_size,
+                            &config->bloom_fp_rate,
+                            &config->bloom_max_elements);
+
+    // free the buffer
     free(content);
 
     // check for error in json scan (-1 == error, 0 == no elements found, >0 == elements parsed)
@@ -126,18 +114,5 @@ int loadConfig(config_t *config, char *configFile)
     {
         return 1;
     }
-
-    // copy the config over to the heap
-    config->filename = c.filename;
-    config->created = c.created;
-    config->modified = c.modified;
-    config->current_log_file = c.current_log_file;
-    config->watch_directory = c.watch_directory;
-    config->white_list = c.white_list;
-    config->pid = c.pid;
-    config->k_size = c.k_size;
-    config->sketch_size = c.sketch_size;
-    config->bloom_fp_rate = c.bloom_fp_rate;
-    config->bloom_max_elements = c.bloom_max_elements;
     return 0;
 }

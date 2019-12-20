@@ -485,3 +485,29 @@ lots of calls to free(wargs) - could create that here and pass to daemonise, so 
 
  move back tomorrow
 */
+
+/*
+antman --start has no leaks, because the program doesn't terminate.
+
+Anything that terminates (stop, setWatchDir etc.) and that creates a log, results in a leak:
+
+==20750== 120 bytes in 6 blocks are definitely lost in loss record 1 of 2
+==20750==    at 0x4C30EFF: malloc (in /home/linuxbrew/.linuxbrew/Cellar/valgrind/3.15.0_1/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==20750==    by 0x4069B5: json_scanf_cb (frozen.c:949)
+==20750==    by 0x404869: json_parse_string.part.8 (frozen.c:249)
+==20750==    by 0x404CE4: json_parse_string (frozen.c:236)
+==20750==    by 0x404CE4: json_parse_value (frozen.c:344)
+==20750==    by 0x404C7D: json_parse_pair (frozen.c:409)
+==20750==    by 0x404C7D: json_parse_object (frozen.c:421)
+==20750==    by 0x404C7D: json_parse_value (frozen.c:347)
+==20750==    by 0x406588: json_doit (frozen.c:434)
+==20750==    by 0x406588: json_walk (frozen.c:815)
+==20750==    by 0x406DAE: json_vscanf (frozen.c:1071)
+==20750==    by 0x406F21: json_scanf (frozen.c:1093)
+==20750==    by 0x4039D1: loadConfig (config.c:110)
+==20750==    by 0x4026B0: main (main.c:263)
+
+so, the config isn't being free'd properly
+
+
+*/
