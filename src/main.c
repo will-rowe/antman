@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
         if (watchDir != NULL)
         {
             slog(0, SLOG_INFO, "setting watch directory...");
-            if (setWatchDir(amConfig, watchDir) != 0)
+            if (setWatchDir(amConfig, strdup(watchDir)) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
         if (whiteList != NULL)
         {
             slog(0, SLOG_INFO, "setting white list...");
-            if (setWhiteList(amConfig, whiteList) != 0)
+            if (setWhiteList(amConfig, strdup(whiteList)) != 0)
             {
                 destroyConfig(amConfig);
                 return 1;
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
         if (logFile != NULL)
         {
             slog(0, SLOG_INFO, "setting log file...");
-            amConfig->current_log_file = logFile;
+            amConfig->current_log_file = strdup(logFile);
             slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
         }
 
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
         // make sure there is a log - create the default if needed
         if (amConfig->current_log_file == NULL)
         {
-            amConfig->current_log_file = defaultLog;
+            amConfig->current_log_file = strdup(defaultLog);
         }
 
         // check the daemon is not already running
