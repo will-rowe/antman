@@ -228,7 +228,11 @@ int daemonize(char *name, char *path, char *outfile, char *errfile, char *infile
     umask(0);
 
     //change to path directory
-    chdir(path);
+    if (chdir(path) != 0)
+    {
+        fprintf(stderr, "error: failed to change directory during daemonisation\n");
+        exit(EXIT_FAILURE);
+    }
 
     //close all open file descriptors
     int fd;
