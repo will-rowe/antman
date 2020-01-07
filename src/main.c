@@ -312,6 +312,12 @@ int main(int argc, char *argv[])
         slog(0, SLOG_LIVE, "\t- daemon running: false");
     }
 
+    // make sure there is a log file on record - create the default if needed (can be changed by the user later)
+    if (amConfig->current_log_file == NULL && logFile == NULL)
+    {
+        logFile = strdup(defaultLog);
+    }
+
     // handle any --stop request
     if (stop == 1)
     {
@@ -400,12 +406,6 @@ int main(int argc, char *argv[])
     {
         slog(0, SLOG_INFO, "checking antman...");
 
-        // make sure there is a log - create the default if needed
-        if (amConfig->current_log_file == NULL)
-        {
-            amConfig->current_log_file = strdup(defaultLog);
-        }
-
         // check the daemon is not already running
         if (amConfig->pid != -1)
         {
@@ -425,13 +425,9 @@ int main(int argc, char *argv[])
         }
         if (amConfig->watch_directory == NULL)
         {
-            slog(0, SLOG_WARN, "no watch directory set, trying default location");
-            if (setWatchDir(amConfig, DEFAULT_WATCH_DIR) != 0)
-            {
-                destroyConfig(amConfig);
-                slog(0, SLOG_ERROR, "could not set watch dir");
-            }
-            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->watch_directory);
+            slog(0, SLOG_ERROR, "no watch directory set");
+            slog(0, SLOG_LIVE, "\t- try `antman --setWatchDir=some/dir`");
+            destroyConfig(amConfig);
             return 1;
         }
         slog(0, SLOG_LIVE, "\t- ready");

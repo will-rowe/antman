@@ -37,6 +37,14 @@ except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to call `antman --setWhiteList=misc/data/NiV_6_Malaysia.fasta` (error code: {})." .format(errorCode))
 
+# check --setWatchDir
+print("setting watch dir...")
+try:
+    setWatchDir = subprocess.run(['antman', '--setWatchDir=/tmp'], stdout=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
+    errorCode = e.returncode
+    sys.exit("---\nerror: failed to call `antman --setWatchDir=/tmp` (error code: {})." .format(errorCode))
+
 # check daemonization
 print("checking daemonization...")
 # first make sure we can get pid
@@ -61,6 +69,8 @@ except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to call `antman --getPID` (error code: {})." .format(errorCode))
 pid = getPID2.stdout.decode('utf-8').rstrip('\n')
+if pid == "-1":
+    sys.exit("---\nerror: antman did not start and failed to issue a launch error")
 # check the PID is in use
 try:
     os.kill(int(pid), 0)
