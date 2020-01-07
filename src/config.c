@@ -15,7 +15,7 @@ config_t *initConfig()
         c->created = NULL;
         c->modified = NULL;
         c->current_log_file = NULL;
-        c->watch_directory = DEFAULT_WATCH_DIR;
+        c->watch_directory = NULL;
         c->white_list = NULL;
         c->pid = -1;
         c->k_size = AM_DEFAULT_K_SIZE;
@@ -30,6 +30,12 @@ config_t *initConfig()
 // destroyConfig
 void destroyConfig(config_t *config)
 {
+    free(config->filename);
+    free(config->created);
+    free(config->modified);
+    free(config->current_log_file);
+    free(config->watch_directory);
+    free(config->white_list);
     free(config);
     config = NULL;
 }
@@ -42,14 +48,18 @@ int writeConfig(config_t *config, char *configFile)
     if (config == 0)
         return 1;
 
-    // update with config with the filepath we are writing to
-    config->filename = configFile;
+    // if this is a new filepath, update with config with the filepath we are writing to
+    if (config->filename != configFile)
+    {
+        free(config->filename);
+        config->filename = strdup(configFile);
+    }
 
     // update the created (if new) and the modified date
     SlogDate date;
     slog_get_date(&date);
-    char timeStamp[18];
-    int ret = snprintf(timeStamp, sizeof(timeStamp), "%d-%d-%d:%d-%d", date.year, date.mon, date.day, date.hour, date.min);
+    char *timeStamp = malloc(18 * sizeof(char));
+    int ret = sprintf(timeStamp, "%d-%d-%d:%d-%d", date.year, date.mon, date.day, date.hour, date.min);
     if (ret > 18)
     {
         fprintf(stderr, "failed to format time stamp\n");
@@ -57,7 +67,7 @@ int writeConfig(config_t *config, char *configFile)
     }
     if (config->created == NULL)
     {
-        config->created = timeStamp;
+        config->created = strdup(timeStamp);
     }
     config->modified = timeStamp;
 

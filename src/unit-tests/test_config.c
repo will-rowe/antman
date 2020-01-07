@@ -8,7 +8,7 @@
 #include "../config.h"
 #include "../frozen.h"
 
-#define AM_CONFIG "./tmp.config"
+#define TMP_CONFIG "./tmp.config"
 #define ERR_initConf1 "could not init a config instance"
 #define ERR_initConf2 "could not write conf file to disk"
 #define ERR_initConf3 "could not load conf from disk"
@@ -31,12 +31,12 @@ static char *test_initConf()
     return ERR_initConf1;
 
   // write it to disk
-  if (writeConfig(tmp, AM_CONFIG) != 0)
+  if (writeConfig(tmp, TMP_CONFIG) != 0)
     return ERR_initConf2;
 
   // try loading from file
   config_t *tmp2 = initConfig();
-  if (loadConfig(tmp2, AM_CONFIG) != 0)
+  if (loadConfig(tmp2, TMP_CONFIG) != 0)
     return ERR_initConf3;
   if (tmp->pid != tmp2->pid)
     return ERR_initConf4;
@@ -44,7 +44,7 @@ static char *test_initConf()
   // clean up the test
   destroyConfig(tmp);
   destroyConfig(tmp2);
-  remove(AM_CONFIG);
+  remove(TMP_CONFIG);
   return 0;
 }
 

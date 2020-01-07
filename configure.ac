@@ -19,6 +19,7 @@ AC_CHECK_LIB([fswatch], [fsw_init_session], [], [AC_MSG_ERROR([Unable to find th
 AC_CHECK_LIB([fswatch], [fsw_start_monitor], [], [AC_MSG_ERROR([Unable to find the fswatch library - supply with LDFLAGS.])])
 
 # Add some defines for automake to give to antman
+AC_SUBST([PROG_NAME], ["antman"])
 AC_SUBST([CONFIG_LOCATION], ["/tmp/.antman.config"])
 AC_SUBST([DEFAULT_WATCH_DIR], ["/var/lib/MinKNOW/data/reads"])
 

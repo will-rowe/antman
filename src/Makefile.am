@@ -7,7 +7,8 @@ OBJS =                  bloom.o config.o daemonize.o frozen.o hashmap.o heap.o m
 
 %.o : %.c
 		$(CC) -c $(CFLAGS) $(EXTRA_FLAGS) \
-		-DAM_VERSION=\"@VERSION@\" \
+		-DPROG_NAME=\"@PROG_NAME@\" \
+		-DPROG_VERSION=\"@VERSION@\" \
 		-DCONFIG_LOCATION=\"@CONFIG_LOCATION@\" \
 		-DDEFAULT_WATCH_DIR=\"@DEFAULT_WATCH_DIR@\" \
 		$< -o $@

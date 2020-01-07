@@ -21,7 +21,7 @@
 void greet()
 {
     printf("=======================================================\n");
-    printf("ANTMAN (version: %s)\n", AM_VERSION);
+    printf("ANTMAN (version: %s)\n", PROG_VERSION);
     printf("=======================================================\n");
 }
 
@@ -32,9 +32,9 @@ void printUsage(void)
 {
     printf("usage:\tantman [flags]\n\n"
            "flags:\n"
-           "\t --setWatchDir <=path>                 \t set the watch directory (default: %s)\n"
-           "\t --setWhiteList <=path/filename>      \t set the white list\n"
-           "\t --setLog <=path/filename>            \t set the log file\n"
+           "\t --setWatchDir=<path>                 \t set the watch directory (default: %s)\n"
+           "\t --setWhiteList=<path/filename>      \t set the white list\n"
+           "\t --setLog=<path/filename>            \t set the log file\n"
            "\t --start                              \t start the antman daemon\n"
            "\t --stop                               \t stop the antman daemon\n"
            "\t --getPID                             \t prints PID of the antman daemon and exits\n"
@@ -162,9 +162,9 @@ int main(int argc, char *argv[])
 
     // set up the job list
     int start = 0, stop = 0, getPID = 0;
-    char *watchDir = "";
-    char *whiteList = "";
-    char *logFile = "";
+    char *watchDir = NULL;
+    char *whiteList = NULL;
+    char *logFile = NULL;
 
     // get a default log name
     time_t timer;
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
         }
         else if (c == 'v')
         {
-            printf("%s\n", AM_VERSION);
+            printf("%s\n", PROG_VERSION);
             return 0;
         }
         else if (c == 301)
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
     }
 
     // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir[0] == '\0') && (logFile[0] == '\0') && (whiteList[0] == '\0'))
+    if (start + stop + getPID == 0 && (watchDir == NULL) && (logFile == NULL) && (whiteList == NULL))
     {
         fprintf(stderr, "nothing to do: no flags set\n\n");
         printUsage();
@@ -333,7 +333,7 @@ int main(int argc, char *argv[])
     }
 
     // handle any --setWatchDir, --setWhiteList or --setLog requests
-    if (watchDir[0] != '\0' || whiteList[0] != '\0' || logFile[0] != '\0')
+    if (watchDir != NULL || whiteList != NULL || logFile != NULL)
     {
 
         // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
         }
 
         // set the watch directory if requested
-        if (watchDir[0] != '\0')
+        if (watchDir != NULL)
         {
             slog(0, SLOG_INFO, "setting watch directory...");
             if (setWatchDir(amConfig, watchDir) != 0)
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
         }
 
         // set the whitelist if requested
-        if (whiteList[0] != '\0')
+        if (whiteList != NULL)
         {
             slog(0, SLOG_INFO, "setting white list...");
             if (setWhiteList(amConfig, whiteList) != 0)
@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
         }
 
         // set the log if requested
-        if (logFile[0] != '\0')
+        if (logFile != NULL)
         {
             slog(0, SLOG_INFO, "setting log file...");
             amConfig->current_log_file = logFile;
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        // check there is a watch directory and  white list stored in the config
+        // check there is a watch directory and white list stored in the config
         if (amConfig->white_list == NULL)
         {
             slog(0, SLOG_ERROR, "no white list found");
@@ -425,9 +425,13 @@ int main(int argc, char *argv[])
         }
         if (amConfig->watch_directory == NULL)
         {
-            slog(0, SLOG_ERROR, "no watch directory found");
-            slog(0, SLOG_LIVE, "\t- try `antman --setWatchDir=/path/to/dir`");
-            destroyConfig(amConfig);
+            slog(0, SLOG_WARN, "no watch directory set, trying default location");
+            if (setWatchDir(amConfig, DEFAULT_WATCH_DIR) != 0)
+            {
+                destroyConfig(amConfig);
+                slog(0, SLOG_ERROR, "could not set watch dir");
+            }
+            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->watch_directory);
             return 1;
         }
         slog(0, SLOG_LIVE, "\t- ready");
@@ -480,34 +484,6 @@ int main(int argc, char *argv[])
 to do -
 if keeping bloom filter, add the free to the destroyConfig function
 
-lots of calls to free(wargs) - could create that here and pass to daemonise, so only one free needed on error
- - have moved this to main but ended up with more leaks....
-
- move back tomorrow
-*/
-
-/*
-antman --start has no leaks, because the program doesn't terminate.
-
-Anything that terminates (stop, setWatchDir etc.) and that creates a log, results a leak:
-
-==20750== 120 bytes in 6 blocks are definitely lost in loss record 1 of 2
-==20750==    at 0x4C30EFF: malloc (in /home/linuxbrew/.linuxbrew/Cellar/valgrind/3.15.0_1/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
-==20750==    by 0x4069B5: json_scanf_cb (frozen.c:949)
-==20750==    by 0x404869: json_parse_string.part.8 (frozen.c:249)
-==20750==    by 0x404CE4: json_parse_string (frozen.c:236)
-==20750==    by 0x404CE4: json_parse_value (frozen.c:344)
-==20750==    by 0x404C7D: json_parse_pair (frozen.c:409)
-==20750==    by 0x404C7D: json_parse_object (frozen.c:421)
-==20750==    by 0x404C7D: json_parse_value (frozen.c:347)
-==20750==    by 0x406588: json_doit (frozen.c:434)
-==20750==    by 0x406588: json_walk (frozen.c:815)
-==20750==    by 0x406DAE: json_vscanf (frozen.c:1071)
-==20750==    by 0x406F21: json_scanf (frozen.c:1093)
-==20750==    by 0x4039D1: loadConfig (config.c:110)
-==20750==    by 0x4026B0: main (main.c:263)
-
-so, the config isn't being free'd properly
-
+sort out wargs - there is a lot of overlap with the config
 
 */

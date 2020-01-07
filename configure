@@ -637,6 +637,7 @@ LTLIBOBJS
 LIBOBJS
 DEFAULT_WATCH_DIR
 CONFIG_LOCATION
+PROG_NAME
 CPP
 LT_SYS_LIBRARY_PATH
 OTOOL64
@@ -12307,6 +12308,8 @@ fi
 
 
 # Add some defines for automake to give to antman
+PROG_NAME="antman"
+
 CONFIG_LOCATION="/tmp/.antman.config"
 
 DEFAULT_WATCH_DIR="/var/lib/MinKNOW/data/reads"
