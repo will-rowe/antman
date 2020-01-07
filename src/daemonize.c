@@ -52,12 +52,6 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
 
     // try daemonising the program
     slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->current_log_file);
-    int res;
-    if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
-    {
-        slog(0, SLOG_ERROR, "could not start the antman daemon");
-        return 1;
-    }
 
     // divert log to file
     SlogConfig slgCfg;
@@ -66,6 +60,13 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
     slgCfg.nFileStamp = 0;
     slgCfg.nTdSafe = 1;
     slog_config_set(&slgCfg);
+
+    int res;
+    if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
+    {
+        slog(0, SLOG_ERROR, "could not start the antman daemon");
+        return 1;
+    }
 
     // log some progress
     slog(0, SLOG_INFO, "checking the antman daemon...");
@@ -165,13 +166,9 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
 // daemonize is used to fork, detach, fork again, change permissions, change directory and then reopen streams
 int daemonize(char *name, char *path, char *outfile, char *errfile, char *infile)
 {
-    if (!path)
-    {
-        path = "/";
-    }
     if (!name)
     {
-        name = "antman";
+        name = PROG_NAME;
     }
     if (!infile)
     {
@@ -227,11 +224,14 @@ int daemonize(char *name, char *path, char *outfile, char *errfile, char *infile
     //new file permissions
     umask(0);
 
-    //change to path directory
-    if (chdir(path) != 0)
+    //change to path directory if requested
+    if (path)
     {
-        fprintf(stderr, "error: failed to change directory during daemonisation\n");
-        exit(EXIT_FAILURE);
+        if (chdir(path) != 0)
+        {
+            fprintf(stderr, "error: failed to change directory during daemonisation\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     //close all open file descriptors
