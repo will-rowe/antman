@@ -435,7 +435,12 @@ int main(int argc, char *argv[])
         // load the white list into a bloom filter
         slog(0, SLOG_INFO, "loading white list into bloom filter...");
         struct bloom refBF;
-        bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
+        if (bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate) != 0)
+        {
+            slog(0, SLOG_ERROR, "could not init bloom filter");
+            destroyConfig(amConfig);
+            return 1;
+        }
         processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
         slog(0, SLOG_LIVE, "\t done");
         amConfig->bloom_filter = &refBF;

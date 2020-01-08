@@ -17,6 +17,7 @@
 #define ERR_initHashMap2 "value not added to hashmap"
 #define ERR_initHashMap3 "value not found in map prior to delete from hashmap"
 #define ERR_initHashMap4 "hashmap did not empty"
+#define ERR_bloomfilter "could not init bloom filter"
 #define ERR_bloomfilter1 "bf should read false for any check when no elements have been added yet"
 #define ERR_bloomfilter2 "bf should not produce false negatives"
 #define ERR_bloomfilter3 "bf has returned a false positive (which does happen...)"
@@ -103,7 +104,10 @@ static char *test_bloomfilter()
   int testStringLen = 13;
 
   struct bloom bloom;
-  bloom_init(&bloom, 1000000, 0.01);
+  if (bloom_init(&bloom, 1000000, 0.01) != 0)
+  {
+    return ERR_bloomfilter;
+  }
   if (bloom_check(&bloom, testString1, testStringLen))
   {
     return ERR_bloomfilter1;
@@ -127,7 +131,10 @@ static char *test_bloomfilter()
 static char *test_sketchSeq()
 {
   struct bloom bloom;
-  bloom_init(&bloom, 1000000, 0.01);
+  if (bloom_init(&bloom, 1000000, 0.01) != 0)
+  {
+    return ERR_bloomfilter;
+  }
 
   // sketch a sequence
   char *seq = "actgactgactg";
