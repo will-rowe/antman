@@ -52,6 +52,12 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
 
     // try daemonising the program
     slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->current_log_file);
+    int res;
+    if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
+    {
+        slog(0, SLOG_ERROR, "could not start the antman daemon");
+        return 1;
+    }
 
     // divert log to file
     SlogConfig slgCfg;
@@ -60,13 +66,6 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
     slgCfg.nFileStamp = 0;
     slgCfg.nTdSafe = 1;
     slog_config_set(&slgCfg);
-
-    int res;
-    if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
-    {
-        slog(0, SLOG_ERROR, "could not start the antman daemon");
-        return 1;
-    }
 
     // log some progress
     slog(0, SLOG_INFO, "checking the antman daemon...");

@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
             destroyConfig(amConfig);
             return 1;
         }
-        slog(0, SLOG_INFO, "stopped the daemon");
+        slog(0, SLOG_LIVE, "\t- stopped the daemon");
         slog(0, SLOG_LIVE, "\t- daemon log: %s", amConfig->current_log_file);
     }
 
