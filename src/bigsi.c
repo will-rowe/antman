@@ -4,6 +4,28 @@
 #include "bigsi.h"
 #include "murmurhash2.h"
 
+inline static void printBV(unsigned char *bv, int bytes)
+{
+
+    for (int i = 0; i < bytes; i++)
+    {
+        int mask = 0x01; /* 00000001 */
+        for (int j = 0; j < 8; j++)
+        {
+            if (bv[i] & mask)
+            {
+                printf("1");
+            }
+            else
+            {
+                printf("0");
+            }
+            mask <<= 1; /* move the bit up */
+        }
+    }
+    printf("\n");
+}
+
 /*
     getReqBytes will return the number of bytes needed to hold the number of bits given
         numBits - number of bits to fit into byte(s)
@@ -270,6 +292,8 @@ int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result)
             return 1;
         }
 
+        printBV(bigsi->index[hv], bigsi->numColourBytes);
+
         // iterate over the bytes in this bit vector
         for (int j = 0; j < bigsi->numColourBytes; j++)
         {
@@ -287,7 +311,8 @@ int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result)
             }
         }
     }
-    return 0;
+
+    return 1;
 }
 
 // destroyBIGSI clears up the BIGSI data structure
