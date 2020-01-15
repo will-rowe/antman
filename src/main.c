@@ -432,6 +432,23 @@ int main(int argc, char *argv[])
         }
         slog(0, SLOG_LIVE, "\t- ready");
 
+        /*
+
+sort out logic here
+
+move the processRef code here
+set up the thread pool earlier
+
+bloom filter per ref
+add to map
+populate bigsi
+
+store bigsi
+
+at some point serialise so we don't have to build it each time
+
+*/
+
         // load the white list into a bloom filter
         slog(0, SLOG_INFO, "loading white list into bloom filter...");
         struct bloom refBF;

@@ -123,7 +123,6 @@ static char *test_insertBIGSI()
   }
 
   // get the result ready
-  int hit = 0;
   unsigned char *result = NULL;
   if ((result = calloc(bigsi->numColourBytes, sizeof(result))) == NULL)
   {
@@ -131,11 +130,11 @@ static char *test_insertBIGSI()
   }
 
   // run the query function on a k-mer which isn't in BIGSI
-  if (queryBIGSI(bigsi, kmerD, 3, result, &hit))
+  if (queryBIGSI(bigsi, kmerD, 3, result))
   {
     return ERR_query;
   }
-  if (hit)
+  if (*result != 0)
   {
     return ERR_query_fp;
   }
@@ -147,11 +146,11 @@ static char *test_insertBIGSI()
   }
 
   // run the query function on a k-mer that is in BIGSI
-  if (queryBIGSI(bigsi, kmerB, 3, result, &hit))
+  if (queryBIGSI(bigsi, kmerB, 3, result))
   {
     return ERR_query;
   }
-  if (!hit)
+  if (*result == 0)
   {
     return ERR_query_fn;
   }

@@ -31,7 +31,7 @@ typedef struct bigsi
 bigsi_t *initBIGSI(int numBits, int numHashes);
 int insertBIGSI(bigsi_t *bigsi, map_uchar_t id2bv, int numEntries);
 int indexBIGSI(bigsi_t *bigsi);
-int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result, int *hit);
+int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result);
 void destroyBIGSI(bigsi_t *bigsi);
 
 #endif

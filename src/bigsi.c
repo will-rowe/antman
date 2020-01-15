@@ -175,7 +175,7 @@ int indexBIGSI(bigsi_t *bigsi)
     {
 
         // create a new bit vector for the row that can hold all the colours
-        bigsi->index[i] = calloc(bigsi->numColourBytes, sizeof(*bigsi->index[i]));
+        bigsi->index[i] = calloc(bigsi->numColourBytes, sizeof(unsigned char *));
         if (bigsi->index[i] == NULL)
         {
             fprintf(stderr, "could not assign memory during BIGSI indexing\n");
@@ -227,10 +227,9 @@ int indexBIGSI(bigsi_t *bigsi)
         bigsi       - the bigsi data structure
         kmer        - the query k-mer
         result      - a user-provided array to return a bit vector of the colours containing the k-mer (must be freed by user)
-        hit         - query sets hit to 1 if one or more colours contain the query k-mer
 
 */
-int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result, int *hit)
+int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result)
 {
     // check the BIGSI is ready for querying
     if (bigsi->index == NULL)
@@ -253,46 +252,41 @@ int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result, int
         return 1;
     }
 
-    // set up mem to hold the bit vectors
-    unsigned char **matches;
-    if ((matches = calloc(bigsi->numHashes, sizeof(unsigned char *))) == NULL)
-    {
-        fprintf(stderr, "could not assign memory during BIGSI query\n");
-        return 1;
-    }
-
-    // hash the k-mer
+    // prepare the k-mer hashing
     register unsigned int a = murmurhash2(kmer, kSize, 0x9747b28c);
     register unsigned int b = murmurhash2(kmer, kSize, a);
     register unsigned int hv;
+
+    // hash the query k-mer n times, grabbing the corresponding row in the bigsi index
     for (int i = 0; i < bigsi->numHashes; i++)
     {
         // get the hash value
         hv = (a + i * b) % bigsi->numBits;
 
-        // get the corresponding bit-vector
+        // get the corresponding bit vector in the bigsi index
         if (!bigsi->index[hv])
         {
             fprintf(stderr, "missing row in BIGSI for hash value: %d\n", hv);
-            free(matches);
             return 1;
         }
-        matches[i] = bigsi->index[hv];
-    }
 
-    // bitwise & on the matches
-    for (int i = 0; i < bigsi->numColourBytes; i++)
-    {
-        for (int j = 1; j < bigsi->numHashes; j++)
+        // iterate over the bytes in this bit vector
+        for (int j = 0; j < bigsi->numColourBytes; j++)
         {
-            result[i] = matches[j - 1][i] & matches[j][i];
-        }
-        if (result[i])
-        {
-            *hit = 1;
+
+            // if it's the first bit vector for this query, use it as the base for the result
+            if (i == 0)
+            {
+                result[j] = 0x000 | bigsi->index[hv][j];
+            }
+
+            // otherwise, bitwise& this bit vector with the previous ones
+            else
+            {
+                result[j] = result[j] & bigsi->index[hv][j];
+            }
         }
     }
-    free(matches);
     return 0;
 }
 
