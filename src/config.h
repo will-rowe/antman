@@ -4,6 +4,7 @@
 #include "bloom.h"
 #include "slog.h"
 
+// TODO: these are temp defines until the CLI is finished
 #define AM_DEFAULT_K_SIZE 7
 #define AM_DEFAULT_SKETCH_SIZE 128
 #define AM_DEFAULT_BLOOM_FP_RATE 0.001

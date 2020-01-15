@@ -1,6 +1,7 @@
 TESTS = $(check_PROGRAMS)
 check_PROGRAMS = 	test_config \
-                    test_heap
+                    test_heap \
+                    test_bigsi
 
 AM_CPPFLAGS =       -I${srcdir}/..
 AM_CFLAGS =         -Wall -std=gnu99
@@ -10,3 +11,5 @@ test_config_CFLAGS =              -std=gnu99 -g $(AM_CFLAGS)
 test_config_LDADD =               $(LD_ADD)
 test_heap_CFLAGS =                -std=gnu99 -g $(AM_CFLAGS)
 test_heap_LDADD =                 $(LD_ADD)
+test_bigsi_CFLAGS =                -std=gnu99 -g $(AM_CFLAGS)
+test_bigsi_LDADD =                 $(LD_ADD)
