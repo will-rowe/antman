@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "bloom.h"
+#include "bloomfilter.h"
 #include "hashmap.h"
 #include "heap.h"
 #include "slog.h"
@@ -52,7 +52,7 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 		bf - pointer to a bloom filter
 		sketchPtr - pointer to a sketch (which has been initalised to == sketchSize)
 */
-void sketchSequence(const char* str, int len, int k, int sketchSize, struct bloom* bf, uint64_t* sketchPtr) {
+void sketchSequence(const char* str, int len, int k, int sketchSize, bloomfilter_t *bf, uint64_t* sketchPtr) {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,
 	// either need checks to make sure this is correct
@@ -99,7 +99,11 @@ void sketchSequence(const char* str, int len, int k, int sketchSize, struct bloo
 
 		// add the hashed k-mer to the bloom filter if required
 		if (bf != NULL) {
-			bloom_add(bf, &hashedKmer, k);
+			if (bfAdd(bf, &hashedKmer, k != 0))
+			{
+				fprintf(stderr, "could not add k-mer to bloom filter\n");
+				return;
+			}
 		}
 
 		// now we have a hashed k-mer, first check if the sketch isn't at capacity yet

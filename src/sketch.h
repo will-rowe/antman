@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 
-#include "bloom.h"
+#include "bloomfilter.h"
 
 /*
     function prototypes
 */
-void sketchSequence(const char *str, int len, int k, int sketchSize, struct bloom *bf, uint64_t *sketchPtr);
+void sketchSequence(const char *str, int len, int k, int sketchSize, bloomfilter_t *bf, uint64_t *sketchPtr);
 
 #endif

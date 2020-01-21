@@ -3,14 +3,14 @@
 
 #include <libfswatch/c/libfswatch.h>
 
-#include "bloom.h"
+#include "bloomfilter.h"
 #include "workerpool.h"
 
 // watcherArgs_t
 typedef struct watcherArgs
 {
     tpool_t *workerPool;
-    struct bloom *bloomFilter;
+    bloomfilter_t *bloomFilter;
     char filepath[50];
     int k_size;
     int sketch_size;

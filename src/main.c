@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "ketopt.h"
-#include "bloom.h"
+#include "bloomfilter.h"
 #include "config.h"
 #include "daemonize.h"
 #include "sequence.h"
@@ -451,16 +451,16 @@ at some point serialise so we don't have to build it each time
 
         // load the white list into a bloom filter
         slog(0, SLOG_INFO, "loading white list into bloom filter...");
-        struct bloom refBF;
-        if (bloom_init(&refBF, amConfig->bloom_max_elements, amConfig->bloom_fp_rate) != 0)
+        bloomfilter_t *refBF = bfInit(amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
+        if (refBF == NULL)
         {
             slog(0, SLOG_ERROR, "could not init bloom filter");
             destroyConfig(amConfig);
             return 1;
         }
-        processRef(amConfig->white_list, &refBF, amConfig->k_size, amConfig->sketch_size);
+        processRef(amConfig->white_list, refBF, amConfig->k_size, amConfig->sketch_size);
         slog(0, SLOG_LIVE, "\t done");
-        amConfig->bloom_filter = &refBF;
+        amConfig->bloom_filter = refBF;
 
         // set up the watch directory
         slog(0, SLOG_INFO, "setting up the directory watcher...");
@@ -468,7 +468,7 @@ at some point serialise so we don't have to build it each time
         if (wargs == NULL)
         {
             slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
-            bloom_free(&refBF);
+            bfDestroy(refBF);
             destroyConfig(amConfig);
             return 1;
         }
@@ -482,14 +482,14 @@ at some point serialise so we don't have to build it each time
         if (startDaemon(amConfig, wargs) != 0)
         {
             free(wargs);
-            bloom_free(&refBF);
+            bfDestroy(refBF);
             destroyConfig(amConfig);
             return 1;
         }
 
         // daemon has been killed
         free(wargs);
-        bloom_free(&refBF);
+        bfDestroy(refBF);
     }
 
     // end of play - no more requests

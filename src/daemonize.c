@@ -6,7 +6,7 @@
 #include <signal.h>   //contains signal(3)
 #include <sys/stat.h> // contains umask(3)
 
-#include "bloom.h"
+#include "bloomfilter.h"
 #include "daemonize.h"
 #include "sequence.h"
 #include "slog.h"

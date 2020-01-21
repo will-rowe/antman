@@ -16,7 +16,7 @@ KSEQ_INIT(gzFile, gzread)
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 // processRef
-void processRef(char *filepath, struct bloom *bf, int kSize, int sketchSize)
+void processRef(char *filepath, bloomfilter_t *bf, int kSize, int sketchSize)
 {
     gzFile fp;
     kseq_t *seq;
@@ -81,7 +81,13 @@ void processFastq(void *args)
         pthread_mutex_lock(&mutex1);
         for (i = 0; i < wargs->sketch_size; i++)
         {
-            if (bloom_check(wargs->bloomFilter, &*(sketch + i), wargs->k_size))
+            uint8_t result = 0;
+            if (bfQuery(wargs->bloomFilter, &*(sketch + i), wargs->k_size, &result) != 0)
+            {
+                fprintf(stderr, "could not query bloom filter\n");
+                return;
+            }
+            if (result == 1)
             {
                 intersections++;
             }

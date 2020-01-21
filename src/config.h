@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "bloom.h"
+#include "bloomfilter.h"
 #include "slog.h"
 
 // TODO: these are temp defines until the CLI is finished
@@ -26,7 +26,7 @@ typedef struct config
     int sketch_size;
     double bloom_fp_rate;
     int bloom_max_elements;
-    struct bloom *bloom_filter;
+    bloomfilter_t *bloom_filter;
 } config_t;
 
 /*

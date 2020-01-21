@@ -6,4 +6,5 @@ nav:
   - Installation: installation.md
   - Using ANTMAN: commands.md
   - The Configuration File: the-config.md
+  - The Index: the-index.md
 theme: readthedocs
