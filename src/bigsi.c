@@ -1,121 +1,83 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "bigsi.h"
-#include "murmurhash2.h"
+#include "bitvector.c"
 
-inline static void printBV(unsigned char *bv, int bytes)
+/*****************************************************************************
+ * bigsInit will initiate a BIGSI.
+ * 
+ * arguments:
+ *      numBits                   - the number of bits per bloom filter
+ *      numHashes                 - the number of hashes used per bloom filter
+ * 
+ * returns:
+ *      an initiated BIGSI
+ * 
+ * note:
+ *      the user must free the returned BIGSI
+ *      the index is not ready until the bigsIndex function is called
+ */
+bigsi_t *bigsInit(int numBits, int numHashes)
 {
+    assert(numBits > 0);
+    assert(numHashes > 0);
 
-    for (int i = 0; i < bytes; i++)
-    {
-        int mask = 0x01; /* 00000001 */
-        for (int j = 0; j < 8; j++)
-        {
-            if (bv[i] & mask)
-            {
-                printf("1");
-            }
-            else
-            {
-                printf("0");
-            }
-            mask <<= 1; /* move the bit up */
-        }
-    }
-    printf("\n");
-}
-
-/*
-    getReqBytes will return the number of bytes needed to hold the number of bits given
-        numBits - number of bits to fit into byte(s)
-*/
-inline static int getReqBytes(int numBits)
-{
-    if (numBits % 8)
-    {
-        return (numBits / 8) + 1;
-    }
-    else
-    {
-        return numBits / 8;
-    }
-}
-
-/*
-    testBit will test if a bit is set in a bit vector: 1 indicates set, 0 indicates not set
-        bv      - the bit vector
-        pos     - the bit to test
-        setBit  - if 1, set the bit (if it's not already)
-*/
-inline static int testBit(unsigned char *bv, unsigned int pos, int setBit)
-{
-    unsigned int byte = pos >> 3;
-    unsigned char c = bv[byte];
-    unsigned int mask = 1 << (pos % 8);
-    if (c & mask)
-    {
-        return 1;
-    }
-    else
-    {
-        if (setBit)
-        {
-            bv[byte] = c | mask;
-        }
-        return 0;
-    }
-}
-
-/*
-    initBIGSI initialises the BIGSI data structure
-        numBits     - the number of bits per bit vector
-        numHashes   - the number of hashes used per bit vector
-*/
-bigsi_t *initBIGSI(int numBits, int numHashes)
-{
-    if (numBits < 1 || numHashes < 1)
-    {
-        return NULL;
-    }
     bigsi_t *newIndex;
     if ((newIndex = malloc(sizeof *newIndex)) != NULL)
     {
         map_init(&newIndex->id2colour);
         newIndex->colourArray = NULL;
-        map_init(&newIndex->bitvectors);
+        newIndex->bvArray = NULL;
         newIndex->numBits = numBits;
-        newIndex->numBytes = getReqBytes(numBits);
         newIndex->numHashes = numHashes;
         newIndex->colourIterator = 0;
         newIndex->index = NULL;
+
+        // work out how many bytes are needed to store numBits
+        newIndex->numBytes = BV_LOCATE_BYTE((numBits - 1)) + 1;
     }
     return newIndex;
 }
 
-/*
-    insertBIGSI is used to assign colours to seqIDs, then insert corresponding bit vectors into the data structure
-        bigsi       - the bigsi data structure
-        id2bv       - a map of the bit vectors to insert (seqID:bitvector)
-        numEntries  - the number of bit vectors to be inserted (the number of elements in the map)
-*/
-int insertBIGSI(bigsi_t *bigsi, map_uchar_t id2bv, int numEntries)
+/*****************************************************************************
+ * bigsAdd will assign colours to seqIDs and add corresponding bloom filters
+ * to the BIGSI.
+ * 
+ * arguments:
+ *      bigsi                     - the BIGSI data structure
+ *      id2bf                     - a map of the bloom filters to insert (seqID:bloomfilter)
+ *      numEntries                - the number of sequences to be inserted (the number of bloom filters in id2bf)
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *      the index is not ready until the bigsIndex function is called
+ */
+int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
 {
 
-    // if this is the first insert, init the colour array
+    // if this is the first insert, init the colour array and bit vector array
     if (!bigsi->colourArray)
     {
-        if ((bigsi->colourArray = malloc(numEntries * sizeof(char *))) == NULL)
+        if ((bigsi->colourArray = malloc(numEntries * sizeof(char **))) == NULL)
         {
             fprintf(stderr, "could not allocate colour array\n");
-            return 1;
+            return -1;
+        }
+        if ((bigsi->bvArray = malloc(numEntries * sizeof(bitvector_t **))) == NULL)
+        {
+            fprintf(stderr, "could not allocate bit vector array\n");
+            return -1;
         }
     }
 
-    // otherwise resize the existing array
+    // otherwise resize the existing arrays
     else
     {
-        char **tmp = realloc(bigsi->colourArray, (bigsi->colourIterator + numEntries) * sizeof(bigsi->colourArray));
+        char **tmp = realloc(bigsi->colourArray, (bigsi->colourIterator + numEntries) * sizeof(char **));
         if (tmp)
         {
             bigsi->colourArray = tmp;
@@ -123,37 +85,59 @@ int insertBIGSI(bigsi_t *bigsi, map_uchar_t id2bv, int numEntries)
         else
         {
             fprintf(stderr, "could not re-allocate colour array\n");
-            return 1;
+            return -1;
+        }
+        bitvector_t **tmp2 = realloc(bigsi->bvArray, (bigsi->colourIterator + numEntries) * sizeof(bitvector_t **));
+        if (tmp2)
+        {
+            bigsi->bvArray = tmp2;
+        }
+        else
+        {
+            fprintf(stderr, "could not re-allocate bit vector array\n");
+            return -1;
         }
     }
 
-    // iterate over the input bit vector map
+    // iterate over the input bloomfilter map, use the colourIterator to assign colours
     const char *seqID;
-    map_iter_t iter = map_iter(&id2bv);
-    while ((seqID = map_next(&id2bv, &iter)))
+    map_iter_t iter = map_iter(&id2bf);
+    while ((seqID = map_next(&id2bf, &iter)))
     {
+
         // if the seqID is already in BIGSI, return error
-        if (map_get(&bigsi->bitvectors, seqID) != NULL)
+        if (map_get(&bigsi->id2colour, seqID) != NULL)
         {
             fprintf(stderr, "duplicate sequence ID can't be added to BIGSI: %s\n", seqID);
-            return 1;
+            return -1;
         }
 
-        // add the new bit vector to the BIGSI map
-        unsigned char **newBV = map_get(&id2bv, seqID);
-        map_set(&bigsi->bitvectors, seqID, *newBV);
+        // check the bloom filter is compatible and not empty
+        bloomfilter_t *newBF = map_get(&id2bf, seqID);
+        if ((newBF->numHashes != bigsi->numHashes) || (newBF->bitvector->capacity != bigsi->numBits))
+        {
+            fprintf(stderr, "bloom filter incompatible with BIGSI for sequence: %s\n", seqID);
+            return -1;
+        }
+        if (bvCount(newBF->bitvector) == 0)
+        {
+            fprintf(stderr, "empty bloom filter supplied to BIGSI for sequence: %s\n", seqID);
+            return -1;
+        }
 
-        // assign a colour for the sequence ID
+        // ADD 1 - get the bit vector and add it to the BIGSI tmp array
+        bigsi->bvArray[bigsi->colourIterator] = bvClone(newBF->bitvector);
+
+        // ADD 2 - store the sequence ID to colour lookup for this bit vector
         map_set(&bigsi->id2colour, seqID, bigsi->colourIterator);
 
-        // add the new colour -> sequence ID to the look up array
-        bigsi->colourArray[bigsi->colourIterator] = malloc(*seqID * sizeof *bigsi->colourArray[bigsi->colourIterator]);
-        if (!bigsi->colourArray[bigsi->colourIterator])
+        // ADD 3 - store the colour to sequence ID lookup as well
+        if ((bigsi->colourArray[bigsi->colourIterator] = malloc(strlen(seqID) + 1)) == NULL)
         {
-            fprintf(stderr, "could not allocate memory for sequence ID: %s\n", seqID);
-            return 1;
+            fprintf(stderr, "could not allocate colour memory for sequence: %s\n", seqID);
+            return -1;
         }
-        bigsi->colourArray[bigsi->colourIterator] = strdup(seqID);
+        strcpy(bigsi->colourArray[bigsi->colourIterator], seqID);
 
         // increment the colour iterator
         bigsi->colourIterator++;
@@ -161,168 +145,220 @@ int insertBIGSI(bigsi_t *bigsi, map_uchar_t id2bv, int numEntries)
     return 0;
 }
 
-/*
-    indexBIGSI is used to transform the bit vectors into the BIGSI index
-        bigsi       - the bigsi data structure
-*/
-int indexBIGSI(bigsi_t *bigsi)
+/*****************************************************************************
+ * bigsIndex will transform the BIGSI bit vectors in the index.
+ * 
+ * arguments:
+ *      bigsi                     - the BIGSI data structure
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ */
+int bigsIndex(bigsi_t *bigsi)
 {
 
     // check there are some bit vectors inserted into the data structure
     if (bigsi->colourIterator < 1)
     {
         fprintf(stderr, "no bit vectors have been inserted into the BIGSI, nothing to index\n");
-        return 1;
+        return -1;
     }
 
     // check it hasn't already been indexed
     if (bigsi->index != NULL)
     {
         fprintf(stderr, "indexing has already been run on this BIGSI\n");
-        return 1;
+        return -1;
     }
 
     // allocate the memory to store the array of BIGSI bit vectors
-    if ((bigsi->index = malloc(bigsi->numBits * sizeof(char *))) == NULL)
+    if ((bigsi->index = malloc(bigsi->numBits * sizeof(bigsi->index))) == NULL)
     {
         fprintf(stderr, "could not assign memory during BIGSI indexing\n");
-        return 1;
+        return -1;
     }
 
-    // calculate how many bytes are needed to hold the colours
-    bigsi->numColourBytes = getReqBytes(bigsi->colourIterator);
-
-    // iterate over the rows in the BIGSI
+    // iterate over all the BIGSI bit vectors by bit index (equates to rows in matrix)
+    // TODO: this is super inefficient - do better
     for (int i = 0; i < bigsi->numBits; i++)
     {
 
-        // create a new bit vector for the row that can hold all the colours
-        bigsi->index[i] = calloc(bigsi->numColourBytes, sizeof(unsigned char *));
+        // create a new bit vector for this row
+        bigsi->index[i] = bvInit(bigsi->colourIterator);
         if (bigsi->index[i] == NULL)
         {
-            fprintf(stderr, "could not assign memory during BIGSI indexing\n");
-            return 1;
+            fprintf(stderr, "could not assign memory for new bit vector during BIGSI indexing\n");
+            return -1;
         }
 
-        // iterate over the bit vector map
-        const char *seqID;
-        map_iter_t iter = map_iter(&bigsi->bitvectors);
-        while ((seqID = map_next(&bigsi->bitvectors, &iter)))
+        // iterate over the bit vectors and check the bit index for the current row
+        for (int colour = 0; colour < bigsi->colourIterator; colour++)
         {
 
-            // get the bit vector
-            unsigned char **bv = map_get(&bigsi->bitvectors, seqID);
-            if (bv == NULL)
+            // check the bit vector
+            if (bigsi->bvArray[colour] == NULL)
             {
-                fprintf(stderr, "lost bit vector from BIGSI: %s\n", seqID);
-                return 1;
+                fprintf(stderr, "lost bit vector from BIGSI\n");
+                return -1;
             }
 
             // check the bit at the required position (current BIGSI row) - skip if 0
-            if (!testBit(*bv, i, 0))
+            uint8_t bit = 0;
+            if (bvGet(bigsi->bvArray[colour], i, &bit) != 0)
+            {
+                fprintf(stderr, "could not access bit at index position %u in bit vector for colour: %u\n", i, colour);
+                return -1;
+            }
+            if (bit == 0)
             {
                 continue;
             }
-
-            // otherwise, get the colour and update the BIGSI
-            int *colour = map_get(&bigsi->id2colour, seqID);
-            if (colour == NULL)
+            // TODO: this check is unecessary as it shouldn't happen...
+            bit = 0;
+            if (bvGet(bigsi->index[i], colour, &bit) != 0)
             {
-                fprintf(stderr, "no colour recorded for seq ID: %s\n", seqID);
-                return 1;
+                fprintf(stderr, "could not access bit at index position %u in bigsi index bit vector %u\n", colour, i);
+                return -1;
             }
-            if (testBit(bigsi->index[i], *colour, 1))
+            if (bit == 1)
             {
-                fprintf(stderr, "trying to set same bit twice in BIGSI for: %s\n", seqID);
-                return 1;
+                fprintf(stderr, "trying to set same bit twice in BIGSI bitvector %u for colour %u\n", i, colour);
+                return -1;
+            }
+
+            // update the BIGSI index with this colour
+            if (bvSet(bigsi->index[i], colour, 1) != 0)
+            {
+                fprintf(stderr, "could not set bit\n");
+                return -1;
             }
         }
     }
 
-    // wipe the input map of bit vectors as it's not needed anymore (could keep if wanting to re-index)
-    map_deinit(&bigsi->bitvectors);
+    // wipe the input bit vectors as they're not needed anymore (TODO: could keep if wanting to re-index)
+    for (int i = 0; i < bigsi->colourIterator; i++)
+    {
+        bvDestroy(bigsi->bvArray[i]);
+    }
     return 0;
 }
 
-/*
-    queryBIGSI will determine if any sequences in the BIGSI contain a query k-mer
-        bigsi       - the bigsi data structure
-        kmer        - the query k-mer
-        result      - a user-provided array to return a bit vector of the colours containing the k-mer (must be freed by user)
-
-*/
-int queryBIGSI(bigsi_t *bigsi, char *kmer, int kSize, unsigned char *result)
+/*****************************************************************************
+ * bigsQuery will determine if any sequences in the BIGSI contain a query
+ * k-mer.
+ * 
+ * arguments:
+ *      bigsi                     - the BIGSI data structure
+ *      buffer                    - the query k-mer
+ *      len                       - the length of the buffer
+ *      result                    - an initialised bit vector to return the colours containing the query k-mer
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *      it is the caller's responsibility to check and free the result
+ */
+int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
 {
     // check the BIGSI is ready for querying
     if (bigsi->index == NULL)
     {
-        fprintf(stderr, "need to run the index function first\n");
-        return 1;
+        fprintf(stderr, "need to run the bigsIndex function first\n");
+        return -1;
     }
 
     // check a k-mer has been provided
-    if (!kmer)
+    if (!buffer)
     {
         fprintf(stderr, "no k-mer provided\n");
-        return 1;
+        return -1;
     }
 
     // check we can send the result
     if (!result)
     {
         fprintf(stderr, "no pointer provided for returning query results\n");
-        return 1;
+        return -1;
+    }
+    if (result->capacity != bigsi->colourIterator)
+    {
+        fprintf(stderr, "result bit vector capacity does not match number of colours in BIGSI\n");
+        return -1;
+    }
+    if (result->count != 0)
+    {
+        fprintf(stderr, "result bit vector isn't empty\n");
+        return -1;
     }
 
-    // prepare the k-mer hashing
-    register unsigned int a = murmurhash2(kmer, kSize, 0x9747b28c);
-    register unsigned int b = murmurhash2(kmer, kSize, a);
+    // hash the query k-mer n times using the same hash func as for the BIGSI bloom filters
     register unsigned int hv;
-
-    // hash the query k-mer n times, grabbing the corresponding row in the bigsi index
     for (int i = 0; i < bigsi->numHashes; i++)
     {
-        // get the hash value
-        hv = (a + i * b) % bigsi->numBits;
+        hv = getHashVal(buffer, len, i, bigsi->numBits);
+
+        fprintf(stderr, "query for: %s, hash %u = %u\n", ((char *)buffer), i, hv);
 
         // get the corresponding bit vector in the bigsi index
         if (!bigsi->index[hv])
         {
             fprintf(stderr, "missing row in BIGSI for hash value: %d\n", hv);
-            return 1;
+            return -1;
         }
 
-        printBV(bigsi->index[hv], bigsi->numColourBytes);
+        // quick check to see if it's empty
+        if (bvCount(bigsi->index[hv]) == 0)
+        {
+            return 0;
+        }
 
-        // iterate over the bytes in this bit vector
-        for (int j = 0; j < bigsi->numColourBytes; j++)
+        // update the result with this bit vector
+        if (i == 0)
+        {
+            // first BIGSI hit can be the basis of the result, so just OR
+            if (bvBOR(result, bigsi->index[hv], result) != 0)
+            {
+                fprintf(stderr, "could not bitwise OR during BIGSI query\n");
+                return -1;
+            }
+        }
+        else
         {
 
-            // if it's the first bit vector for this query, use it as the base for the result
-            if (i == 0)
+            // bitwise AND the current result with the new BIGSI hit
+            if (bvBANDupdate(result, bigsi->index[hv]) != 0)
             {
-                result[j] = 0x000 | bigsi->index[hv][j];
+                fprintf(stderr, "could not bitwise AND during BIGSI query\n");
+                return -1;
             }
 
-            // otherwise, bitwise& this bit vector with the previous ones
-            else
+            // if the current result is now empty, we can leave early
+            if (bvCount(result) == 0)
             {
-                result[j] = result[j] & bigsi->index[hv][j];
+                return 0;
             }
         }
     }
-
-    return 1;
+    return 0;
 }
 
-// destroyBIGSI clears up the BIGSI data structure
-void destroyBIGSI(bigsi_t *index)
+/*****************************************************************************
+ * bigsDestroy will clear a BIGSI and release the memory.
+ * 
+ * arguments:
+ *      bigsi                     - the BIGSI data structure
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ */
+int bigsDestroy(bigsi_t *index)
 {
     if (!index)
-        return;
-    index->numBits = 0;
-    index->numHashes = 0;
-    index->colourIterator = 0;
+    {
+        fprintf(stderr, "no BIGSI was provided to bigsDestroy\n");
+        return -1;
+    }
     if (index->colourArray)
     {
         for (int i = 0; i < index->colourIterator; i++)
@@ -341,8 +377,15 @@ void destroyBIGSI(bigsi_t *index)
     }
     else
     {
-        map_deinit(&index->bitvectors);
+        for (int i = 0; i < index->colourIterator; i++)
+        {
+            bvDestroy(index->bvArray[i]);
+        }
     }
+    index->numBits = 0;
+    index->numHashes = 0;
+    index->colourIterator = 0;
     map_deinit(&index->id2colour);
     free(index);
+    return 0;
 }
