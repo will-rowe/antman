@@ -6,6 +6,8 @@
 
 #include "minunit.h"
 #include "../bigsi.h"
+#include "../bitvector.h"
+#include "../bloomfilter.h"
 #include "../map.h"
 
 #define BIT_NUM 10
@@ -18,27 +20,30 @@
 #define ERR_duplicate "allowed duplicate entries into BIGSI"
 #define ERR_iterator "iterator and insert mismatch"
 #define ERR_empty_index "allowed empty BIGSI to be indexed"
+#define ERR_empty_index2 "bigsIndex returned empty index"
 #define ERR_query_init "can't assign memory for query result"
 #define ERR_query "query failed"
+#define ERR_bitvector_clear "could not clear bit vector"
 #define ERR_query_fp "bigsi false positive"
 #define ERR_query_fn "bigsi false negative"
+#define ERR_bitvector_get "could not run bvGet"
 
 int tests_run = 0;
 
 /*
   test the BIGSI initialisation and destruction
 */
-static char *test_initBIGSI()
+static char *test_bigsInit()
 {
   // init a BIGSI
-  bigsi_t *tmp = initBIGSI(BIT_NUM, HASH_NUM);
+  bigsi_t *tmp = bigsInit(BIT_NUM, HASH_NUM);
   if (tmp == 0 || tmp->numBits != BIT_NUM)
   {
     return ERR_init;
   }
 
   // clean up the test
-  destroyBIGSI(tmp);
+  bigsDestroy(tmp);
   if (tmp->numBits != 0)
   {
     return ERR_destroy;
@@ -48,136 +53,145 @@ static char *test_initBIGSI()
 
 /*
   test the BIGSI insert and index
+
+  sequence 1 will contain k-mers A and B (act, ggg)
+  sequence 2 will contain k-mer C (cgt)
+  neither sequence will contain k-mer D (ccc)
+
 */
-static char *test_insertBIGSI()
+static char *test_bigsAdd()
 {
 
   // 3 dummy k-mers
-  char kmerA[3] = "act";
-  char kmerB[3] = "ggg";
-  char kmerC[3] = "cgt";
-  char kmerD[3] = "ccc";
+  char kmerA[] = "act";
+  char kmerB[] = "ggg";
+  char kmerC[] = "cgt";
+  char kmerD[] = "ccc";
 
-  // create 3 sequence bloom filters
-  struct bloom bloomA;
-  struct bloom bloomB;
-  struct bloom bloomC;
-  if ((bloom_init(&bloomA, 1000, 0.01) != 0) || (bloom_init(&bloomB, 1000, 0.01) != 0) || (bloom_init(&bloomC, 1000, 0.01) != 0))
+  // create 2 sequence bloom filters
+  bloomfilter_t *bloomSeq1 = bfInit(2000, 0.01);
+  bloomfilter_t *bloomSeq2 = bfInit(2000, 0.01);
+  if ((bloomSeq1 == NULL) || (bloomSeq2 == NULL))
   {
     return ERR_bloomfilter;
   }
-  bloom_add(&bloomA, kmerA, 3);
-  bloom_add(&bloomB, kmerB, 3);
-  bloom_add(&bloomC, kmerC, 3);
-  if ((!bloom_check(&bloomA, kmerA, 3)) || (!bloom_check(&bloomB, kmerB, 3)) || (!bloom_check(&bloomC, kmerC, 3)))
-  {
-    return ERR_bloomfilter_2;
-  }
+  bfAdd(bloomSeq1, &kmerA, 3);
+  bfAdd(bloomSeq1, &kmerB, 3);
+  bfAdd(bloomSeq2, &kmerC, 3);
 
   // init a BIGSI
-  bigsi_t *bigsi = initBIGSI(bloomA.bits, bloomA.hashes);
+  bigsi_t *bigsi = bigsInit(bvCapacity(bloomSeq1->bitvector), bloomSeq1->numHashes);
 
   // check that an index operation can't be performed before bit vectors have been added
-  if (indexBIGSI(bigsi) != 1)
+  if (bigsIndex(bigsi) != -1)
   {
     return ERR_empty_index;
   }
 
-  // create map for bit vectors and add one
-  map_uchar_t bvMap;
-  map_init(&bvMap);
-  map_set(&bvMap, "kmerA", bloomA.bf);
+  // create map for bit filters and add one
+  map_bloomfilter_t bfMap;
+  map_init(&bfMap);
+  map_set(&bfMap, "sequence 1", *bloomSeq1);
 
   // insert a single bit vector
-  if (insertBIGSI(bigsi, bvMap, 1) != 0)
+  if (bigsAdd(bigsi, bfMap, 1) != 0)
   {
     return ERR_insert;
   }
 
   // check you can't insert the same seqID
-  if (insertBIGSI(bigsi, bvMap, 1) != 1)
+  if (bigsAdd(bigsi, bfMap, 1) != -1)
   {
     return ERR_duplicate;
   }
 
   // add a couple more seqIDs, then check colours
-  map_remove(&bvMap, "kmerA");
-  map_set(&bvMap, "kmerB", bloomB.bf);
-  map_set(&bvMap, "kmerC", bloomC.bf);
-  if (insertBIGSI(bigsi, bvMap, 2) != 0)
+  map_remove(&bfMap, "sequence 1");
+  map_set(&bfMap, "sequence 2", *bloomSeq2);
+  if (bigsAdd(bigsi, bfMap, 2) != 0)
   {
     return ERR_insert;
   }
-  if (bigsi->colourIterator != 3)
+  if (bigsi->colourIterator != 2)
   {
     return ERR_iterator;
   }
-  bloom_free(&bloomA);
-  bloom_free(&bloomB);
-  bloom_free(&bloomC);
+
+  // bloom filters are now copied to BIGSI, delete originals
+  bfDestroy(bloomSeq1);
+  bfDestroy(bloomSeq2);
 
   // run the indexing function
-  if (indexBIGSI(bigsi) != 0)
+  if (bigsIndex(bigsi) != 0)
   {
-    return ERR_empty_index;
+    return ERR_empty_index2;
   }
 
   // get the result ready
-  unsigned char *result = NULL;
-  if ((result = calloc(bigsi->numColourBytes, sizeof(result))) == NULL)
+  bitvector_t *result = bvInit(bigsi->colourIterator);
+  if (result == NULL)
   {
     return ERR_query_init;
   }
 
   // run the query function on a k-mer which isn't in BIGSI
-  if (queryBIGSI(bigsi, kmerD, 3, result))
-  {
-    //return ERR_query;
-  }
-  if (*result != 0)
-  {
-    //return ERR_query_fp;
-  }
-
-  // reassign mem for result
-  if ((result = calloc(bigsi->numColourBytes, sizeof(result))) == NULL)
-  {
-    return ERR_query_init;
-  }
-
-  // run the query function on a k-mer that is in BIGSI
-  if (queryBIGSI(bigsi, kmerB, 3, result))
+  if (bigsQuery(bigsi, &kmerD, 3, result))
   {
     return ERR_query;
   }
-  if (*result == 0)
+  if (bvCount(result) != 0)
+  {
+    return ERR_query_fp;
+  }
+
+  // wipe the result bit vector
+  if (bvClear(result) != 0)
+  {
+    return ERR_bitvector_clear;
+  }
+
+  // run the query function on a k-mer that is in BIGSI
+  if (bigsQuery(bigsi, &kmerB, 3, result))
+  {
+    return ERR_query;
+  }
+  if (bvCount(result) == 0)
   {
     return ERR_query_fn;
   }
 
   // check the colour matches the seqID
-  for (int i = 0; i < bigsi->numColourBytes; i++)
+  int correctMatch = 0;
+  for (int colour = 0; colour < bigsi->colourIterator; colour++)
   {
-    int mask = 0x01; /* 00000001 */
-    for (int j = 0; j < 8; j++)
+    uint8_t bitCheck = 0;
+    if (bvGet(result, colour, &bitCheck) != 0)
     {
-      if (result[i] & mask)
-      {
-        if (strcmp(bigsi->colourArray[i + j], "kmerB"))
-        {
-          fprintf(stderr, "false positive for colour: %d\n", i + j);
-          fprintf(stderr, "translates to %s, expected kmerB\n", bigsi->colourArray[i + j]);
-          return ERR_query_fp;
-        }
-      }
-      mask <<= 1; /* move the bit up */
+      return ERR_bitvector_get;
     }
+    if (bitCheck == 1)
+    {
+      fprintf(stdout, "query match for colour: %u\n", colour);
+      fprintf(stdout, "equates to sequence ID: %s\n", bigsi->colourArray[colour]);
+      if (strcmp(bigsi->colourArray[colour], "sequence 1"))
+      {
+        return ERR_query_fp;
+      }
+      else
+      {
+        correctMatch = 1;
+      }
+    }
+  }
+  if (correctMatch != 1)
+  {
+    return ERR_query_fn;
   }
 
   // clean up the test
-  destroyBIGSI(bigsi);
-  free(result);
-  map_deinit(&bvMap);
+  bigsDestroy(bigsi);
+  bvDestroy(result);
+  map_deinit(&bfMap);
   return 0;
 }
 
@@ -186,8 +200,8 @@ static char *test_insertBIGSI()
 */
 static char *all_tests()
 {
-  mu_run_test(test_initBIGSI);
-  mu_run_test(test_insertBIGSI);
+  mu_run_test(test_bigsInit);
+  mu_run_test(test_bigsAdd);
   return 0;
 }
 

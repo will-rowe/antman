@@ -1,6 +1,8 @@
 TESTS = $(check_PROGRAMS)
 check_PROGRAMS = 	test_config \
                     test_heap \
+                    test_bitvector \
+                    test_bloomfilter \
                     test_bigsi
 
 AM_CPPFLAGS =       -I${srcdir}/..
@@ -11,5 +13,9 @@ test_config_CFLAGS =              -std=gnu99 -g $(AM_CFLAGS)
 test_config_LDADD =               $(LD_ADD)
 test_heap_CFLAGS =                -std=gnu99 -g $(AM_CFLAGS)
 test_heap_LDADD =                 $(LD_ADD)
-test_bigsi_CFLAGS =                -std=gnu99 -g $(AM_CFLAGS)
-test_bigsi_LDADD =                 $(LD_ADD)
+test_bitvector_CFLAGS =           -std=gnu99 -g $(AM_CFLAGS)
+test_bitvector_LDADD =            $(LD_ADD)
+test_bloomfilter_CFLAGS =           -std=gnu99 -g $(AM_CFLAGS)
+test_bloomfilter_LDADD =            $(LD_ADD)
+test_bigsi_CFLAGS =               -std=gnu99 -g $(AM_CFLAGS)
+test_bigsi_LDADD =                $(LD_ADD)
