@@ -69,7 +69,7 @@ static inline int bvCheck(const bitvector_t *bv, uint64_t bit, uint8_t val)
 
     if (bit >= bv->capacity)
     {
-        fprintf(stderr, "requested bit exceeds bit vector capacity (%llu vs %llu)\n", bit, bv->capacity);
+        fprintf(stderr, "requested bit index exceeds bit vector capacity (%llu vs %llu)\n", bit, bv->capacity);
         return -1;
     }
 
@@ -127,33 +127,55 @@ static inline int bvHelper(bitvector_t *bv, uint64_t bit, uint8_t *val, uint8_t 
 }
 
 // bvBitwise will perform some bitwise operations
-static inline int bvBitwise(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result, int band, int bor, int xor)
+static inline int bvBitwise(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result, int band, int bor, int xor, int bandUpdate)
 {
-    if ((band + bor + xor) != 1)
+    if ((band + bor + xor+bandUpdate) != 1)
     {
-        fprintf(stderr, "provide bvBitwise function with ONE of: band, bor, xor\n");
+        fprintf(stderr, "provide bvBitwise function with ONE of: band, bor, xor, bandUpdate\n");
         return -1;
     }
-    if ((bv1 == NULL) || (bv2 == NULL) || (result == NULL))
+
+    // do checks
+    if (!bandUpdate)
     {
-        fprintf(stderr, "too few bit vectors were provided for bitwise operation\n");
-        return -1;
+        if ((bv1 == NULL) || (bv2 == NULL) || (result == NULL))
+        {
+            fprintf(stderr, "too few bit vectors were provided for bitwise operation\n");
+            return -1;
+        }
+        if (result->count > 0)
+        {
+            fprintf(stderr, "bit vector for the result is not empty\n");
+            return -1;
+        }
+        if ((bv1->capacity != bv2->capacity) || (bv2->capacity != result->capacity))
+        {
+            fprintf(stderr, "provided bit vectors have different capacities: %llu, %llu and %llu\n", bv1->capacity, bv2->capacity, result->capacity);
+            return -1;
+        }
     }
-    if (result->count > 0)
+    else
     {
-        fprintf(stderr, "bit vector for the result is not empty\n");
-        return -1;
+        if (bv2->capacity != result->capacity)
+        {
+            fprintf(stderr, "provided bit vectors have different capacities: %llu and %llu\n", bv2->capacity, result->capacity);
+            return -1;
+        }
     }
-    if ((bv1->capacity != bv2->capacity) || (bv2->capacity != result->capacity))
-    {
-        fprintf(stderr, "provided bit vectors have different capacities: %llu, %llu and %llu\n", bv1->capacity, bv2->capacity, result->capacity);
-        return -1;
-    }
+
+    // cycle through the bytes
     for (uint64_t i = 0; i < result->bufSize; i++)
     {
         if (band == 1)
         {
-            result->buffer[i] = bv1->buffer[i] & bv2->buffer[i];
+            if (bv1 == NULL)
+            {
+                result->buffer[i] &= bv2->buffer[i];
+            }
+            else
+            {
+                result->buffer[i] = bv1->buffer[i] & bv2->buffer[i];
+            }
         }
         if (bor == 1)
         {
@@ -164,6 +186,9 @@ static inline int bvBitwise(const bitvector_t *bv1, const bitvector_t *bv2, bitv
             result->buffer[i] = bv1->buffer[i] ^ bv2->buffer[i];
         }
     }
+
+    // update the bit count
+    // TODO: should I do this during the previous loop?
     result->count = bvPopCount(result);
     return 0;
 }
@@ -197,6 +222,45 @@ bitvector_t *bvInit(uint64_t capacity)
         bv->bufSize = bufSize;
     }
     return bv;
+}
+
+/*****************************************************************************
+ * bvClone will initiate a bit vector which is a clone of an existing bit
+ * vector.
+ * 
+ * arguments:
+ *      bv - the bit vector to be cloned
+ * 
+ * returns:
+ *      an initiated bit vector
+ * 
+ * note:
+ *      the user must free the returned bit vector
+ */
+bitvector_t *bvClone(const bitvector_t *bv)
+{
+    // check the input bit vector
+    assert(bv != NULL);
+    assert(bv->capacity > 0);
+
+    // allocate memory for the bit vector struct
+    bitvector_t *clone;
+    if ((clone = calloc(sizeof(bitvector_t) + sizeof(uint8_t), bv->bufSize)) != NULL)
+    {
+        clone->capacity = bv->capacity;
+        clone->bufSize = bv->bufSize;
+    }
+
+    // copy the buffer
+    for (uint64_t i = 0; i < bv->bufSize; i++)
+    {
+        clone->buffer[i] |= bv->buffer[i];
+    }
+    clone->count = bvPopCount(clone);
+
+    // check that the buffer copied
+    assert(bv->count == clone->count);
+    return clone;
 }
 
 /*****************************************************************************
@@ -253,7 +317,7 @@ int bvSet(bitvector_t *bv, uint64_t bit, uint8_t val)
  * 
  * arguments:
  *      bv      - the query bit vector
- *      bit     - the bit index to set
+ *      bit     - the bit index to get
  *      result  - a pointer to an uint8, used to return the bit value
  * 
  * returns:
@@ -322,7 +386,7 @@ int bvDestroy(bitvector_t *bv)
  */
 void bvPrint(bitvector_t *bv)
 {
-    printf("bit vector summary->\n- set bits: %llu\n- bit capacity: %llu\n- byte capacity: %llu\nbit vector->\n", bv->count, bv->capacity, bv->bufSize);
+    printf("bit vector summary->\n- set bits: %llu\n- bit capacity: %llu\n- bytes reserved: %llu\nbit vector->\n", bv->count, bv->capacity, bv->bufSize);
     if (bv == NULL)
     {
         printf("NULL\n");
@@ -350,7 +414,7 @@ void bvPrint(bitvector_t *bv)
  */
 int bvBAND(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result)
 {
-    return bvBitwise(bv1, bv2, result, 1, 0, 0);
+    return bvBitwise(bv1, bv2, result, 1, 0, 0, 0);
 }
 
 /*****************************************************************************
@@ -366,7 +430,7 @@ int bvBAND(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result)
  */
 int bvBOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result)
 {
-    return bvBitwise(bv1, bv2, result, 0, 1, 0);
+    return bvBitwise(bv1, bv2, result, 0, 1, 0, 0);
 }
 
 /*****************************************************************************
@@ -382,5 +446,21 @@ int bvBOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result)
  */
 int bvXOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result)
 {
-    return bvBitwise(bv1, bv2, result, 0, 0, 1);
+    return bvBitwise(bv1, bv2, result, 0, 0, 1, 0);
+}
+
+/*****************************************************************************
+ * bvBANDupdate will bitwise AND two bit vectors, storing the answer in the
+ * first bit vector
+ * 
+ * arguments:
+ *      bv1      - the first bit vector (which is updated)
+ *      bv2      - the second bit vector
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ */
+int bvBANDupdate(bitvector_t *bv1, const bitvector_t *bv2)
+{
+    return bvBitwise(NULL, bv2, bv1, 0, 0, 0, 1);
 }

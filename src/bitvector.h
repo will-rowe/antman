@@ -25,6 +25,7 @@ typedef struct BitVector
  * function prototypes
  */
 bitvector_t *bvInit(uint64_t capacity);
+bitvector_t *bvClone(const bitvector_t *bv);
 uint64_t bvCapacity(const bitvector_t *bv);
 uint64_t bvCount(const bitvector_t *bv);
 int bvSet(bitvector_t *bv, uint64_t bit, uint8_t val);
@@ -35,5 +36,7 @@ void bvPrint(bitvector_t *bv);
 int bvBAND(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
 int bvBOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
 int bvXOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
+
+int bvBANDupdate(bitvector_t *bv1, const bitvector_t *bv2);
 
 #endif
