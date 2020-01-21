@@ -39,8 +39,9 @@ static inline uint64_t bvPopCount(const bitvector_t *bv)
     uint64_t count = 0;
     for (uint64_t i = 0; i < bv->bufSize; i++)
     {
-#if __has_builtin(__builtin_popcount)
+        //#if __has_builtin(__builtin_popcount)
         count += __builtin_popcount(bv->buffer[i]);
+        /*
 #else
         unsigned char x = bv->buffer[i];
         while (x)
@@ -49,6 +50,7 @@ static inline uint64_t bvPopCount(const bitvector_t *bv)
             x &= x - 1;
         }
 #endif
+*/
     }
     return count;
 }
@@ -69,7 +71,7 @@ static inline int bvCheck(const bitvector_t *bv, uint64_t bit, uint8_t val)
 
     if (bit >= bv->capacity)
     {
-        fprintf(stderr, "requested bit index exceeds bit vector capacity (%llu vs %llu)\n", bit, bv->capacity);
+        fprintf(stderr, "requested bit index exceeds bit vector capacity (%lu vs %lu)\n", bit, bv->capacity);
         return -1;
     }
 
@@ -150,7 +152,7 @@ static inline int bvBitwise(const bitvector_t *bv1, const bitvector_t *bv2, bitv
         }
         if ((bv1->capacity != bv2->capacity) || (bv2->capacity != result->capacity))
         {
-            fprintf(stderr, "provided bit vectors have different capacities: %llu, %llu and %llu\n", bv1->capacity, bv2->capacity, result->capacity);
+            fprintf(stderr, "provided bit vectors have different capacities: %lu, %lu and %lu\n", bv1->capacity, bv2->capacity, result->capacity);
             return -1;
         }
     }
@@ -158,7 +160,7 @@ static inline int bvBitwise(const bitvector_t *bv1, const bitvector_t *bv2, bitv
     {
         if (bv2->capacity != result->capacity)
         {
-            fprintf(stderr, "provided bit vectors have different capacities: %llu and %llu\n", bv2->capacity, result->capacity);
+            fprintf(stderr, "provided bit vectors have different capacities: %lu and %lu\n", bv2->capacity, result->capacity);
             return -1;
         }
     }
@@ -386,7 +388,7 @@ int bvDestroy(bitvector_t *bv)
  */
 void bvPrint(bitvector_t *bv)
 {
-    printf("bit vector summary->\n- set bits: %llu\n- bit capacity: %llu\n- bytes reserved: %llu\nbit vector->\n", bv->count, bv->capacity, bv->bufSize);
+    printf("bit vector summary->\n- set bits: %lu\n- bit capacity: %lu\n- bytes reserved: %lu\nbit vector->\n", bv->count, bv->capacity, bv->bufSize);
     if (bv == NULL)
     {
         printf("NULL\n");
