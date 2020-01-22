@@ -30,8 +30,8 @@ Kernel configured for up to 8 processors.
 Processor type: x86_64h (Intel x86-64h Haswell)
 Processors active: 0 1 2 3 4 5 6 7
 Primary memory available: 16.00 gigabytes
-Default processor set: 452 tasks, 2263 threads, 8 processors
-Load average: 3.12, Mach factor: 4.87
+Default processor set: 489 tasks, 2724 threads, 8 processors
+Load average: 4.32, Mach factor: 3.67
 /bin/machine           = unknown
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
@@ -55,38 +55,38 @@ PATH: /Users/willrowe/go/bin
 ## Core tests. ##
 ## ----------- ##
 
-configure:2262: checking for a BSD-compatible install
-configure:2330: result: /Users/willrowe/anaconda3/bin/install -c
-configure:2341: checking whether build environment is sane
-configure:2396: result: yes
-configure:2547: checking for a thread-safe mkdir -p
-configure:2586: result: /Users/willrowe/anaconda3/bin/mkdir -p
-configure:2593: checking for gawk
-configure:2609: found /usr/local/bin/gawk
-configure:2620: result: gawk
-configure:2631: checking whether make sets $(MAKE)
-configure:2653: result: yes
-configure:2682: checking whether make supports nested variables
-configure:2699: result: yes
-configure:2836: checking whether make supports nested variables
-configure:2853: result: yes
-configure:2868: checking whether make supports the include directive
-configure:2883: make -f confmf.GNU && cat confinc.out
+configure:2316: checking for a BSD-compatible install
+configure:2384: result: /Users/willrowe/anaconda3/bin/install -c
+configure:2395: checking whether build environment is sane
+configure:2450: result: yes
+configure:2601: checking for a thread-safe mkdir -p
+configure:2640: result: /Users/willrowe/anaconda3/bin/mkdir -p
+configure:2647: checking for gawk
+configure:2663: found /usr/local/bin/gawk
+configure:2674: result: gawk
+configure:2685: checking whether make sets $(MAKE)
+configure:2707: result: yes
+configure:2736: checking whether make supports nested variables
+configure:2753: result: yes
+configure:2890: checking whether make supports nested variables
+configure:2907: result: yes
+configure:2922: checking whether make supports the include directive
+configure:2937: make -f confmf.GNU && cat confinc.out
 this is the am__doit target
-configure:2886: $? = 0
-configure:2905: result: yes (GNU style)
-configure:2975: checking for gcc
-configure:2991: found /usr/local/bin/gcc
-configure:3002: result: gcc
-configure:3231: checking for C compiler version
-configure:3240: gcc --version >&5
+configure:2940: $? = 0
+configure:2959: result: yes (GNU style)
+configure:3029: checking for gcc
+configure:3045: found /usr/local/bin/gcc
+configure:3056: result: gcc
+configure:3285: checking for C compiler version
+configure:3294: gcc --version >&5
 gcc (Homebrew GCC 9.2.0_3) 9.2.0
 Copyright (C) 2019 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-configure:3251: $? = 0
-configure:3240: gcc -v >&5
+configure:3305: $? = 0
+configure:3294: gcc -v >&5
 Using built-in specs.
 COLLECT_GCC=gcc
 COLLECT_LTO_WRAPPER=/usr/local/Cellar/gcc/9.2.0_3/libexec/gcc/x86_64-apple-darwin19/9.2.0/lto-wrapper
@@ -94,184 +94,184 @@ Target: x86_64-apple-darwin19
 Configured with: ../configure --build=x86_64-apple-darwin19 --prefix=/usr/local/Cellar/gcc/9.2.0_3 --libdir=/usr/local/Cellar/gcc/9.2.0_3/lib/gcc/9 --disable-nls --enable-checking=release --enable-languages=c,c++,objc,obj-c++,fortran --program-suffix=-9 --with-gmp=/usr/local/opt/gmp --with-mpfr=/usr/local/opt/mpfr --with-mpc=/usr/local/opt/libmpc --with-isl=/usr/local/opt/isl --with-system-zlib --with-pkgversion='Homebrew GCC 9.2.0_3' --with-bugurl=https://github.com/Homebrew/homebrew-core/issues --disable-multilib --with-native-system-header-dir=/usr/include --with-sysroot=/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk
 Thread model: posix
 gcc version 9.2.0 (Homebrew GCC 9.2.0_3) 
-configure:3251: $? = 0
-configure:3240: gcc -V >&5
+configure:3305: $? = 0
+configure:3294: gcc -V >&5
 gcc: error: unrecognized command line option '-V'
 gcc: fatal error: no input files
 compilation terminated.
-configure:3251: $? = 1
-configure:3240: gcc -qversion >&5
+configure:3305: $? = 1
+configure:3294: gcc -qversion >&5
 gcc: error: unrecognized command line option '-qversion'; did you mean '--version'?
 gcc: fatal error: no input files
 compilation terminated.
-configure:3251: $? = 1
-configure:3271: checking whether the C compiler works
-configure:3293: gcc -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
-configure:3297: $? = 0
-configure:3345: result: yes
-configure:3348: checking for C compiler default output file name
-configure:3350: result: a.out
-configure:3356: checking for suffix of executables
-configure:3363: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
-configure:3367: $? = 0
-configure:3389: result: 
-configure:3411: checking whether we are cross compiling
-configure:3419: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
-configure:3423: $? = 0
-configure:3430: ./conftest
-configure:3434: $? = 0
-configure:3449: result: no
-configure:3454: checking for suffix of object files
-configure:3476: gcc -c -I/usr/local/include  conftest.c >&5
-configure:3480: $? = 0
-configure:3501: result: o
-configure:3505: checking whether we are using the GNU C compiler
-configure:3524: gcc -c -I/usr/local/include  conftest.c >&5
-configure:3524: $? = 0
-configure:3533: result: yes
-configure:3542: checking whether gcc accepts -g
-configure:3562: gcc -c -g  conftest.c >&5
-configure:3562: $? = 0
-configure:3603: result: yes
-configure:3620: checking for gcc option to accept ISO C89
-configure:3683: gcc  -c -I/usr/local/include  conftest.c >&5
-configure:3683: $? = 0
-configure:3696: result: none needed
-configure:3721: checking whether gcc understands -c and -o together
-configure:3743: gcc -c conftest.c -o conftest2.o
-configure:3746: $? = 0
-configure:3743: gcc -c conftest.c -o conftest2.o
-configure:3746: $? = 0
-configure:3758: result: yes
-configure:3777: checking dependency style of gcc
-configure:3888: result: gcc3
-configure:3953: checking for ar
-configure:3969: found /usr/bin/ar
-configure:3980: result: ar
-configure:4006: checking the archiver (ar) interface
-configure:4022: gcc -c -I/usr/local/include  conftest.c >&5
-configure:4022: $? = 0
-configure:4024: ar cru libconftest.a conftest.o >&5
-configure:4027: $? = 0
-configure:4055: result: ar
-configure:4104: checking build system type
-configure:4118: result: x86_64-apple-darwin19.2.0
-configure:4138: checking host system type
-configure:4151: result: x86_64-apple-darwin19.2.0
-configure:4192: checking how to print strings
-configure:4219: result: printf
-configure:4240: checking for a sed that does not truncate output
-configure:4304: result: /usr/bin/sed
-configure:4322: checking for grep that handles long lines and -e
-configure:4380: result: /usr/local/bin/ggrep
-configure:4385: checking for egrep
-configure:4447: result: /usr/local/bin/ggrep -E
-configure:4452: checking for fgrep
-configure:4514: result: /usr/local/bin/ggrep -F
-configure:4549: checking for ld used by gcc
-configure:4616: result: /usr/bin/ld
-configure:4623: checking if the linker (/usr/bin/ld) is GNU ld
-configure:4638: result: no
-configure:4650: checking for BSD- or MS-compatible name lister (nm)
-configure:4704: result: /usr/bin/nm -B
-configure:4834: checking the name lister (/usr/bin/nm -B) interface
-configure:4841: gcc -c -I/usr/local/include  conftest.c >&5
-configure:4844: /usr/bin/nm -B "conftest.o"
-configure:4847: output
+configure:3305: $? = 1
+configure:3325: checking whether the C compiler works
+configure:3347: gcc -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
+configure:3351: $? = 0
+configure:3399: result: yes
+configure:3402: checking for C compiler default output file name
+configure:3404: result: a.out
+configure:3410: checking for suffix of executables
+configure:3417: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
+configure:3421: $? = 0
+configure:3443: result: 
+configure:3465: checking whether we are cross compiling
+configure:3473: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
+configure:3477: $? = 0
+configure:3484: ./conftest
+configure:3488: $? = 0
+configure:3503: result: no
+configure:3508: checking for suffix of object files
+configure:3530: gcc -c -I/usr/local/include  conftest.c >&5
+configure:3534: $? = 0
+configure:3555: result: o
+configure:3559: checking whether we are using the GNU C compiler
+configure:3578: gcc -c -I/usr/local/include  conftest.c >&5
+configure:3578: $? = 0
+configure:3587: result: yes
+configure:3596: checking whether gcc accepts -g
+configure:3616: gcc -c -g  conftest.c >&5
+configure:3616: $? = 0
+configure:3657: result: yes
+configure:3674: checking for gcc option to accept ISO C89
+configure:3737: gcc  -c -I/usr/local/include  conftest.c >&5
+configure:3737: $? = 0
+configure:3750: result: none needed
+configure:3775: checking whether gcc understands -c and -o together
+configure:3797: gcc -c conftest.c -o conftest2.o
+configure:3800: $? = 0
+configure:3797: gcc -c conftest.c -o conftest2.o
+configure:3800: $? = 0
+configure:3812: result: yes
+configure:3831: checking dependency style of gcc
+configure:3942: result: gcc3
+configure:4007: checking for ar
+configure:4023: found /usr/bin/ar
+configure:4034: result: ar
+configure:4060: checking the archiver (ar) interface
+configure:4076: gcc -c -I/usr/local/include  conftest.c >&5
+configure:4076: $? = 0
+configure:4078: ar cru libconftest.a conftest.o >&5
+configure:4081: $? = 0
+configure:4109: result: ar
+configure:4158: checking build system type
+configure:4172: result: x86_64-apple-darwin19.2.0
+configure:4192: checking host system type
+configure:4205: result: x86_64-apple-darwin19.2.0
+configure:4246: checking how to print strings
+configure:4273: result: printf
+configure:4294: checking for a sed that does not truncate output
+configure:4358: result: /usr/bin/sed
+configure:4376: checking for grep that handles long lines and -e
+configure:4434: result: /usr/local/bin/ggrep
+configure:4439: checking for egrep
+configure:4501: result: /usr/local/bin/ggrep -E
+configure:4506: checking for fgrep
+configure:4568: result: /usr/local/bin/ggrep -F
+configure:4603: checking for ld used by gcc
+configure:4670: result: /usr/bin/ld
+configure:4677: checking if the linker (/usr/bin/ld) is GNU ld
+configure:4692: result: no
+configure:4704: checking for BSD- or MS-compatible name lister (nm)
+configure:4758: result: /usr/bin/nm -B
+configure:4888: checking the name lister (/usr/bin/nm -B) interface
+configure:4895: gcc -c -I/usr/local/include  conftest.c >&5
+configure:4898: /usr/bin/nm -B "conftest.o"
+configure:4901: output
 0000000000000000 S _some_variable
-configure:4854: result: BSD nm
-configure:4857: checking whether ln -s works
-configure:4861: result: yes
-configure:4869: checking the maximum length of command line arguments
-configure:5000: result: 196608
-configure:5048: checking how to convert x86_64-apple-darwin19.2.0 file names to x86_64-apple-darwin19.2.0 format
-configure:5088: result: func_convert_file_noop
-configure:5095: checking how to convert x86_64-apple-darwin19.2.0 file names to toolchain format
-configure:5115: result: func_convert_file_noop
-configure:5122: checking for /usr/bin/ld option to reload object files
-configure:5129: result: -r
-configure:5203: checking for objdump
-configure:5219: found /usr/bin/objdump
-configure:5230: result: objdump
-configure:5262: checking how to recognize dependent libraries
-configure:5462: result: pass_all
-configure:5547: checking for dlltool
-configure:5577: result: no
-configure:5607: checking how to associate runtime and link libraries
-configure:5634: result: printf %s\n
-configure:5758: checking for archiver @FILE support
-configure:5775: gcc -c -I/usr/local/include  conftest.c >&5
-configure:5775: $? = 0
-configure:5778: ar cru libconftest.a @conftest.lst >&5
+configure:4908: result: BSD nm
+configure:4911: checking whether ln -s works
+configure:4915: result: yes
+configure:4923: checking the maximum length of command line arguments
+configure:5054: result: 196608
+configure:5102: checking how to convert x86_64-apple-darwin19.2.0 file names to x86_64-apple-darwin19.2.0 format
+configure:5142: result: func_convert_file_noop
+configure:5149: checking how to convert x86_64-apple-darwin19.2.0 file names to toolchain format
+configure:5169: result: func_convert_file_noop
+configure:5176: checking for /usr/bin/ld option to reload object files
+configure:5183: result: -r
+configure:5257: checking for objdump
+configure:5273: found /usr/bin/objdump
+configure:5284: result: objdump
+configure:5316: checking how to recognize dependent libraries
+configure:5516: result: pass_all
+configure:5601: checking for dlltool
+configure:5631: result: no
+configure:5661: checking how to associate runtime and link libraries
+configure:5688: result: printf %s\n
+configure:5812: checking for archiver @FILE support
+configure:5829: gcc -c -I/usr/local/include  conftest.c >&5
+configure:5829: $? = 0
+configure:5832: ar cru libconftest.a @conftest.lst >&5
 ar: @conftest.lst: No such file or directory
-configure:5781: $? = 1
-configure:5801: result: no
-configure:5859: checking for strip
-configure:5875: found /usr/bin/strip
-configure:5886: result: strip
-configure:5958: checking for ranlib
-configure:5974: found /usr/bin/ranlib
-configure:5985: result: ranlib
-configure:6087: checking command to parse /usr/bin/nm -B output from gcc object
-configure:6240: gcc -c -I/usr/local/include  conftest.c >&5
-configure:6243: $? = 0
-configure:6247: /usr/bin/nm -B conftest.o \| sed -n -e 's/^.*[ ]\([BCDEGRST][BCDEGRST]*\)[ ][ ]*\([_A-Za-z][_A-Za-z0-9]*\)$/\1 \2 \2/p' | sed '/ __gnu_lto/d' \> conftest.nm
-configure:6250: $? = 0
+configure:5835: $? = 1
+configure:5855: result: no
+configure:5913: checking for strip
+configure:5929: found /usr/bin/strip
+configure:5940: result: strip
+configure:6012: checking for ranlib
+configure:6028: found /usr/bin/ranlib
+configure:6039: result: ranlib
+configure:6141: checking command to parse /usr/bin/nm -B output from gcc object
+configure:6294: gcc -c -I/usr/local/include  conftest.c >&5
+configure:6297: $? = 0
+configure:6301: /usr/bin/nm -B conftest.o \| sed -n -e 's/^.*[ ]\([BCDEGRST][BCDEGRST]*\)[ ][ ]*\([_A-Za-z][_A-Za-z0-9]*\)$/\1 \2 \2/p' | sed '/ __gnu_lto/d' \> conftest.nm
+configure:6304: $? = 0
 cannot find nm_test_var in conftest.nm
-configure:6240: gcc -c -I/usr/local/include  conftest.c >&5
-configure:6243: $? = 0
-configure:6247: /usr/bin/nm -B conftest.o \| sed -n -e 's/^.*[ ]\([BCDEGRST][BCDEGRST]*\)[ ][ ]*_\([_A-Za-z][_A-Za-z0-9]*\)$/\1 _\2 \2/p' | sed '/ __gnu_lto/d' \> conftest.nm
-configure:6250: $? = 0
-configure:6316: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c conftstm.o >&5
-configure:6319: $? = 0
-configure:6357: result: ok
-configure:6404: checking for sysroot
-configure:6434: result: no
-configure:6441: checking for a working dd
-configure:6479: result: /Users/willrowe/anaconda3/bin/dd
-configure:6483: checking how to truncate binary pipes
-configure:6498: result: /Users/willrowe/anaconda3/bin/dd bs=4096 count=1
-configure:6827: checking for mt
-configure:6857: result: no
-configure:6877: checking if : is a manifest tool
-configure:6883: : '-?'
-configure:6891: result: no
-configure:6947: checking for dsymutil
-configure:6963: found /usr/bin/dsymutil
-configure:6974: result: dsymutil
-configure:7039: checking for nmedit
-configure:7055: found /usr/bin/nmedit
-configure:7066: result: nmedit
-configure:7131: checking for lipo
-configure:7147: found /usr/bin/lipo
-configure:7158: result: lipo
-configure:7223: checking for otool
-configure:7239: found /usr/bin/otool
-configure:7250: result: otool
-configure:7315: checking for otool64
-configure:7345: result: no
-configure:7390: checking for -single_module linker flag
+configure:6294: gcc -c -I/usr/local/include  conftest.c >&5
+configure:6297: $? = 0
+configure:6301: /usr/bin/nm -B conftest.o \| sed -n -e 's/^.*[ ]\([BCDEGRST][BCDEGRST]*\)[ ][ ]*_\([_A-Za-z][_A-Za-z0-9]*\)$/\1 _\2 \2/p' | sed '/ __gnu_lto/d' \> conftest.nm
+configure:6304: $? = 0
+configure:6370: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c conftstm.o >&5
+configure:6373: $? = 0
+configure:6411: result: ok
+configure:6458: checking for sysroot
+configure:6488: result: no
+configure:6495: checking for a working dd
+configure:6533: result: /Users/willrowe/anaconda3/bin/dd
+configure:6537: checking how to truncate binary pipes
+configure:6552: result: /Users/willrowe/anaconda3/bin/dd bs=4096 count=1
+configure:6881: checking for mt
+configure:6911: result: no
+configure:6931: checking if : is a manifest tool
+configure:6937: : '-?'
+configure:6945: result: no
+configure:7001: checking for dsymutil
+configure:7017: found /usr/bin/dsymutil
+configure:7028: result: dsymutil
+configure:7093: checking for nmedit
+configure:7109: found /usr/bin/nmedit
+configure:7120: result: nmedit
+configure:7185: checking for lipo
+configure:7201: found /usr/bin/lipo
+configure:7212: result: lipo
+configure:7277: checking for otool
+configure:7293: found /usr/bin/otool
+configure:7304: result: otool
+configure:7369: checking for otool64
+configure:7399: result: no
+configure:7444: checking for -single_module linker flag
 gcc -I/usr/local/include -L/usr/local/lib -o libconftest.dylib -dynamiclib -Wl,-single_module conftest.c
-configure:7423: result: yes
-configure:7426: checking for -exported_symbols_list linker flag
-configure:7446: gcc -o conftest -I/usr/local/include  -L/usr/local/lib -Wl,-exported_symbols_list,conftest.sym conftest.c  >&5
-configure:7446: $? = 0
-configure:7456: result: yes
-configure:7459: checking for -force_load linker flag
+configure:7477: result: yes
+configure:7480: checking for -exported_symbols_list linker flag
+configure:7500: gcc -o conftest -I/usr/local/include  -L/usr/local/lib -Wl,-exported_symbols_list,conftest.sym conftest.c  >&5
+configure:7500: $? = 0
+configure:7510: result: yes
+configure:7513: checking for -force_load linker flag
 gcc -I/usr/local/include -c -o conftest.o conftest.c
 ar cru libconftest.a conftest.o
 ranlib libconftest.a
 gcc -I/usr/local/include -L/usr/local/lib -o conftest conftest.c -Wl,-force_load,./libconftest.a
-configure:7491: result: yes
-configure:7568: checking how to run the C preprocessor
-configure:7599: gcc -E  conftest.c
-configure:7599: $? = 0
-configure:7613: gcc -E  conftest.c
+configure:7545: result: yes
+configure:7622: checking how to run the C preprocessor
+configure:7653: gcc -E  conftest.c
+configure:7653: $? = 0
+configure:7667: gcc -E  conftest.c
 conftest.c:11:10: fatal error: ac_nonexistent.h: No such file or directory
    11 | #include <ac_nonexistent.h>
       |          ^~~~~~~~~~~~~~~~~~
 compilation terminated.
-configure:7613: $? = 1
+configure:7667: $? = 1
 configure: failed program was:
 | /* confdefs.h */
 | #define PACKAGE_NAME "antman"
@@ -284,15 +284,15 @@ configure: failed program was:
 | #define VERSION "0.0.1"
 | /* end confdefs.h.  */
 | #include <ac_nonexistent.h>
-configure:7638: result: gcc -E
-configure:7658: gcc -E  conftest.c
-configure:7658: $? = 0
-configure:7672: gcc -E  conftest.c
+configure:7692: result: gcc -E
+configure:7712: gcc -E  conftest.c
+configure:7712: $? = 0
+configure:7726: gcc -E  conftest.c
 conftest.c:11:10: fatal error: ac_nonexistent.h: No such file or directory
    11 | #include <ac_nonexistent.h>
       |          ^~~~~~~~~~~~~~~~~~
 compilation terminated.
-configure:7672: $? = 1
+configure:7726: $? = 1
 configure: failed program was:
 | /* confdefs.h */
 | #define PACKAGE_NAME "antman"
@@ -305,100 +305,100 @@ configure: failed program was:
 | #define VERSION "0.0.1"
 | /* end confdefs.h.  */
 | #include <ac_nonexistent.h>
-configure:7701: checking for ANSI C header files
-configure:7721: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7721: $? = 0
-configure:7794: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
-configure:7794: $? = 0
-configure:7794: ./conftest
-configure:7794: $? = 0
-configure:7805: result: yes
-configure:7818: checking for sys/types.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for sys/stat.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for stdlib.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for string.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for memory.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for strings.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for inttypes.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for stdint.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7818: checking for unistd.h
-configure:7818: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7818: $? = 0
-configure:7818: result: yes
-configure:7832: checking for dlfcn.h
-configure:7832: gcc -c -I/usr/local/include  conftest.c >&5
-configure:7832: $? = 0
-configure:7832: result: yes
-configure:8088: checking for objdir
-configure:8103: result: .libs
-configure:8367: checking if gcc supports -fno-rtti -fno-exceptions
-configure:8385: gcc -c -I/usr/local/include  -fno-rtti -fno-exceptions conftest.c >&5
+configure:7755: checking for ANSI C header files
+configure:7775: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7775: $? = 0
+configure:7848: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c  >&5
+configure:7848: $? = 0
+configure:7848: ./conftest
+configure:7848: $? = 0
+configure:7859: result: yes
+configure:7872: checking for sys/types.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for sys/stat.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for stdlib.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for string.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for memory.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for strings.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for inttypes.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for stdint.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7872: checking for unistd.h
+configure:7872: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7872: $? = 0
+configure:7872: result: yes
+configure:7886: checking for dlfcn.h
+configure:7886: gcc -c -I/usr/local/include  conftest.c >&5
+configure:7886: $? = 0
+configure:7886: result: yes
+configure:8142: checking for objdir
+configure:8157: result: .libs
+configure:8421: checking if gcc supports -fno-rtti -fno-exceptions
+configure:8439: gcc -c -I/usr/local/include  -fno-rtti -fno-exceptions conftest.c >&5
 cc1: warning: command line option '-fno-rtti' is valid for C++/D/ObjC++ but not for C
-configure:8389: $? = 0
-configure:8402: result: no
-configure:8760: checking for gcc option to produce PIC
-configure:8767: result: -fno-common -DPIC
-configure:8775: checking if gcc PIC flag -fno-common -DPIC works
-configure:8793: gcc -c -I/usr/local/include  -fno-common -DPIC -DPIC conftest.c >&5
-configure:8797: $? = 0
-configure:8810: result: yes
-configure:8839: checking if gcc static flag -static works
-configure:8867: result: no
-configure:8882: checking if gcc supports -c -o file.o
-configure:8903: gcc -c -I/usr/local/include  -o out/conftest2.o conftest.c >&5
-configure:8907: $? = 0
-configure:8929: result: yes
-configure:8937: checking if gcc supports -c -o file.o
-configure:8984: result: yes
-configure:9017: checking whether the gcc linker (/usr/bin/ld) supports shared libraries
-configure:10276: result: yes
-configure:10516: checking dynamic linker characteristics
-configure:11334: result: darwin19.2.0 dyld
-configure:11456: checking how to hardcode library paths into programs
-configure:11481: result: immediate
-configure:12029: checking whether stripping libraries is possible
-configure:12043: result: yes
-configure:12069: checking if libtool supports shared libraries
-configure:12071: result: yes
-configure:12074: checking whether to build shared libraries
-configure:12099: result: yes
-configure:12102: checking whether to build static libraries
-configure:12106: result: yes
-configure:12156: checking libfswatch/c/libfswatch.h usability
-configure:12156: gcc -c -I/usr/local/include  conftest.c >&5
-configure:12156: $? = 0
-configure:12156: result: yes
-configure:12156: checking libfswatch/c/libfswatch.h presence
-configure:12156: gcc -E  conftest.c
+configure:8443: $? = 0
+configure:8456: result: no
+configure:8814: checking for gcc option to produce PIC
+configure:8821: result: -fno-common -DPIC
+configure:8829: checking if gcc PIC flag -fno-common -DPIC works
+configure:8847: gcc -c -I/usr/local/include  -fno-common -DPIC -DPIC conftest.c >&5
+configure:8851: $? = 0
+configure:8864: result: yes
+configure:8893: checking if gcc static flag -static works
+configure:8921: result: no
+configure:8936: checking if gcc supports -c -o file.o
+configure:8957: gcc -c -I/usr/local/include  -o out/conftest2.o conftest.c >&5
+configure:8961: $? = 0
+configure:8983: result: yes
+configure:8991: checking if gcc supports -c -o file.o
+configure:9038: result: yes
+configure:9071: checking whether the gcc linker (/usr/bin/ld) supports shared libraries
+configure:10330: result: yes
+configure:10570: checking dynamic linker characteristics
+configure:11388: result: darwin19.2.0 dyld
+configure:11510: checking how to hardcode library paths into programs
+configure:11535: result: immediate
+configure:12083: checking whether stripping libraries is possible
+configure:12097: result: yes
+configure:12123: checking if libtool supports shared libraries
+configure:12125: result: yes
+configure:12128: checking whether to build shared libraries
+configure:12153: result: yes
+configure:12156: checking whether to build static libraries
+configure:12160: result: yes
+configure:12210: checking libfswatch/c/libfswatch.h usability
+configure:12210: gcc -c -I/usr/local/include  conftest.c >&5
+configure:12210: $? = 0
+configure:12210: result: yes
+configure:12210: checking libfswatch/c/libfswatch.h presence
+configure:12210: gcc -E  conftest.c
 conftest.c:23:10: fatal error: libfswatch/c/libfswatch.h: No such file or directory
    23 | #include <libfswatch/c/libfswatch.h>
       |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~
 compilation terminated.
-configure:12156: $? = 1
+configure:12210: $? = 1
 configure: failed program was:
 | /* confdefs.h */
 | #define PACKAGE_NAME "antman"
@@ -423,26 +423,44 @@ configure: failed program was:
 | #define LT_OBJDIR ".libs/"
 | /* end confdefs.h.  */
 | #include <libfswatch/c/libfswatch.h>
-configure:12156: result: no
-configure:12156: WARNING: libfswatch/c/libfswatch.h: accepted by the compiler, rejected by the preprocessor!
-configure:12156: WARNING: libfswatch/c/libfswatch.h: proceeding with the compiler's result
-configure:12156: checking for libfswatch/c/libfswatch.h
-configure:12156: result: yes
-configure:12170: checking for pthread_create in -lpthread
-configure:12195: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lpthread   >&5
-configure:12195: $? = 0
-configure:12204: result: yes
-configure:12215: checking for fsw_init_session in -lfswatch
-configure:12240: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lfswatch  -lpthread  >&5
-configure:12240: $? = 0
-configure:12249: result: yes
-configure:12262: checking for fsw_start_monitor in -lfswatch
-configure:12287: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lfswatch  -lfswatch -lpthread  >&5
-configure:12287: $? = 0
-configure:12296: result: yes
-configure:12467: checking that generated files are newer than configure
-configure:12473: result: done
-configure:12496: creating ./config.status
+configure:12210: result: no
+configure:12210: WARNING: libfswatch/c/libfswatch.h: accepted by the compiler, rejected by the preprocessor!
+configure:12210: WARNING: libfswatch/c/libfswatch.h: proceeding with the compiler's result
+configure:12210: checking for libfswatch/c/libfswatch.h
+configure:12210: result: yes
+configure:12224: checking for uint8_t
+configure:12224: gcc -c -I/usr/local/include  conftest.c >&5
+configure:12224: $? = 0
+configure:12224: result: yes
+configure:12238: checking for uint32_t
+configure:12238: gcc -c -I/usr/local/include  conftest.c >&5
+configure:12238: $? = 0
+configure:12238: result: yes
+configure:12252: checking for uint64_t
+configure:12252: gcc -c -I/usr/local/include  conftest.c >&5
+configure:12252: $? = 0
+configure:12252: result: yes
+configure:12268: checking for pthread_create in -lpthread
+configure:12293: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lpthread   >&5
+configure:12293: $? = 0
+configure:12302: result: yes
+configure:12313: checking for fsw_init_session in -lfswatch
+configure:12338: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lfswatch  -lpthread  >&5
+configure:12338: $? = 0
+configure:12347: result: yes
+configure:12360: checking for fsw_start_monitor in -lfswatch
+configure:12385: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lfswatch  -lfswatch -lpthread  >&5
+configure:12385: $? = 0
+configure:12394: result: yes
+configure:12409: checking if __builtin_popcount() is supported
+configure:12415: gcc -o conftest -I/usr/local/include  -L/usr/local/lib conftest.c -lfswatch -lfswatch -lpthread  >&5
+conftest.c:27:1: warning: return type defaults to 'int' [-Wimplicit-int]
+   27 | main(){unsigned int x; x = __builtin_popcount(x);}
+      | ^~~~
+configure:12415: $? = 0
+configure:12580: checking that generated files are newer than configure
+configure:12586: result: done
+configure:12609: creating ./config.status
 
 ## ---------------------- ##
 ## Running config.status. ##
@@ -477,6 +495,9 @@ config.status:1180: executing libtool commands
 
 ac_cv_build=x86_64-apple-darwin19.2.0
 ac_cv_c_compiler_gnu=yes
+ac_cv_c_uint32_t=yes
+ac_cv_c_uint64_t=yes
+ac_cv_c_uint8_t=yes
 ac_cv_env_CC_set=
 ac_cv_env_CC_value=
 ac_cv_env_CFLAGS_set=set

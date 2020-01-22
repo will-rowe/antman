@@ -39,18 +39,8 @@ static inline uint64_t bvPopCount(const bitvector_t *bv)
     uint64_t count = 0;
     for (uint64_t i = 0; i < bv->bufSize; i++)
     {
-        //#if __has_builtin(__builtin_popcount)
+        // use the builtin popcount function (presence checked for by automake)
         count += __builtin_popcount(bv->buffer[i]);
-        /*
-#else
-        unsigned char x = bv->buffer[i];
-        while (x)
-        {
-            count++;
-            x &= x - 1;
-        }
-#endif
-*/
     }
     return count;
 }

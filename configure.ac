@@ -13,10 +13,19 @@ AC_LANG(C)
 # Checks for header files
 AC_CHECK_HEADERS([libfswatch/c/libfswatch.h], [], [AC_MSG_ERROR([Unable to find the fswatch headers - supply location with CFLAGS or make sure it is installed (brew install fswatch).])])
 
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_UINT8_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
+
 # Checks for libraries
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([fswatch], [fsw_init_session], [], [AC_MSG_ERROR([Unable to find the fswatch library - supply with LDFLAGS.])])
 AC_CHECK_LIB([fswatch], [fsw_start_monitor], [], [AC_MSG_ERROR([Unable to find the fswatch library - supply with LDFLAGS.])])
+
+# Check for builtins
+AC_MSG_CHECKING(if __builtin_popcount() is supported)
+AC_LINK_IFELSE([AC_LANG_SOURCE([main(){unsigned int x; x = __builtin_popcount(x);}])], [], [AC_MSG_ERROR([Unable to find the popcount builtin function.])])
 
 # Add some defines for automake to give to antman
 AC_SUBST([PROG_NAME], ["antman"])
