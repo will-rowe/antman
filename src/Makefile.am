@@ -22,7 +22,7 @@ antman_LDADD = libantman.a $(LD_ADD)
 
 bitvector.o: bitvector.h
 bloomfilter.o: bloomfilter.h bitvector.h murmurhash3.h
-bigsi.o: bigsi.h map.h
+bigsi.o: bigsi.h map.h bloomfilter.h bitvector.h
 config.o: bloomfilter.h config.h frozen.h slog.h
 daemonize.o: daemonize.h bloomfilter.h sequence.h slog.h watcher.h workerpool.h
 hashmap.o: hashmap.h

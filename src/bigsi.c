@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include "bigsi.h"
-#include "bitvector.c"
 
 /*****************************************************************************
  * bigsInit will initiate a BIGSI.
@@ -36,7 +35,7 @@ bigsi_t *bigsInit(int numBits, int numHashes)
         newIndex->index = NULL;
 
         // work out how many bytes are needed to store numBits
-        newIndex->numBytes = BV_LOCATE_BYTE((numBits - 1)) + 1;
+        newIndex->numBytes = ((numBits - 1) % 8) + 1;
     }
     return newIndex;
 }
