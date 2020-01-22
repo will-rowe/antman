@@ -12,10 +12,11 @@
  *      numHashes                 - the number of hashes used per bloom filter
  * 
  * returns:
- *      an initiated BIGSI
+ *      pointer to an initiated BIGSI
  * 
  * note:
  *      the user must free the returned BIGSI
+ *      the user must check the returned BIGSI for NULL (failed to init)
  *      the index is not ready until the bigsIndex function is called
  */
 bigsi_t *bigsInit(int numBits, int numHashes)
@@ -26,9 +27,9 @@ bigsi_t *bigsInit(int numBits, int numHashes)
     bigsi_t *newIndex;
     if ((newIndex = malloc(sizeof *newIndex)) != NULL)
     {
+        newIndex->bvArray = NULL;
         map_init(&newIndex->id2colour);
         newIndex->colourArray = NULL;
-        newIndex->bvArray = NULL;
         newIndex->numBits = numBits;
         newIndex->numHashes = numHashes;
         newIndex->colourIterator = 0;
@@ -99,6 +100,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
     }
 
     // iterate over the input bloomfilter map, use the colourIterator to assign colours
+    int inputMapCheck = 0;
     const char *seqID;
     map_iter_t iter = map_iter(&id2bf);
     while ((seqID = map_next(&id2bf, &iter)))
@@ -140,6 +142,16 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
 
         // increment the colour iterator
         bigsi->colourIterator++;
+
+        // increment the map checker
+        inputMapCheck++;
+    }
+
+    // check the number of input bloom filters matched the number expected by the user, otherwise we'll have memory issues
+    if (inputMapCheck != numEntries)
+    {
+        fprintf(stderr, "number bloom filters read did not match expected number: %u vs %u\n", inputMapCheck, numEntries);
+        return -1;
     }
     return 0;
 }
@@ -234,11 +246,12 @@ int bigsIndex(bigsi_t *bigsi)
         }
     }
 
-    // wipe the input bit vectors as they're not needed anymore (TODO: could keep if wanting to re-index)
+    // wipe the input bit vectors and the seqID map as they're not needed anymore (TODO: could keep if wanting to re-index)
     for (int i = 0; i < bigsi->colourIterator; i++)
     {
         bvDestroy(bigsi->bvArray[i]);
     }
+    map_deinit(&bigsi->id2colour);
     return 0;
 }
 
@@ -351,40 +364,115 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
  * returns:
  *      0 on success, -1 on error
  */
-int bigsDestroy(bigsi_t *index)
+int bigsDestroy(bigsi_t *bigsi)
 {
-    if (!index)
+    if (!bigsi)
     {
         fprintf(stderr, "no BIGSI was provided to bigsDestroy\n");
         return -1;
     }
-    if (index->colourArray)
+
+    // if there has been a call to bigsAdd, there will be some freeing to do
+    if (bigsi->colourIterator != 0)
     {
-        for (int i = 0; i < index->colourIterator; i++)
+        // there will be a colourArray to free
+        for (int i = 0; i < bigsi->colourIterator; i++)
         {
-            free(index->colourArray[i]);
+            free(bigsi->colourArray[i]);
         }
-        free(index->colourArray);
+        free(bigsi->colourArray);
+
+        // if there has been a call to bigsIndex, free the index
+        if (bigsi->index)
+        {
+            for (int i = 0; i < bigsi->numBits; i++)
+            {
+                free(bigsi->index[i]);
+            }
+            free(bigsi->index);
+        }
+
+        // otherwise there will be input bloom filters and a lookup map that haven't been freed yet
+        else
+        {
+            for (int i = 0; i < bigsi->colourIterator; i++)
+            {
+                bvDestroy(bigsi->bvArray[i]);
+            }
+            map_deinit(&bigsi->id2colour);
+        }
     }
-    if (index->index)
+
+    bigsi->numBits = 0;
+    bigsi->numHashes = 0;
+    bigsi->colourIterator = 0;
+    free(bigsi);
+    return 0;
+}
+
+/*****************************************************************************
+ * bigsDump will dump an indexed BIGSI to disk.
+ * 
+ * arguments:
+ *      bigsi                     - the BIGSI data structure
+ *      filepath                  - the filepath to write the BIGSI to
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ */
+int bigsDump(bigsi_t *bigsi, const char *filepath)
+{
+
+    // open file for writing
+    FILE *outfile = fopen(filepath, "w");
+    if (!outfile)
     {
-        for (int i = 0; i < index->numBits; i++)
-        {
-            free(index->index[i]);
-        }
-        free(index->index);
+        fprintf(stderr, "can't open file for writing: %s\n", filepath);
+        return -1;
     }
-    else
+
+    // write struct to file
+    if (fwrite(bigsi, sizeof(*bigsi), 1, outfile) == 0)
     {
-        for (int i = 0; i < index->colourIterator; i++)
-        {
-            bvDestroy(index->bvArray[i]);
-        }
+        fprintf(stderr, "can't write BIGSI to file: %s\n", filepath);
+        return -1;
     }
-    index->numBits = 0;
-    index->numHashes = 0;
-    index->colourIterator = 0;
-    map_deinit(&index->id2colour);
-    free(index);
+
+    // close file
+    fclose(outfile);
+    return 0;
+}
+
+/*****************************************************************************
+ * bigsLoad will load an indexed BIGSI from disk.
+ * 
+ * arguments:
+ *      filepath                  - the filepath to write the BIGSI to
+ * 
+ * returns:
+ *      pointer to the loaded BIGSI
+ * 
+ * note:
+ *      the user must free the returned BIGSI
+ *      the user must check the returned BIGSI for NULL (failed to init)
+ */
+bigsi_t *bigsLoad(const char *filepath)
+{
+    bigsi_t *input = bigsInit(1, 1);
+
+    // open file for reading
+    FILE *infile = fopen(filepath, "r");
+    if (infile == NULL)
+    {
+        fprintf(stderr, "can't open file for reading: %s\n", filepath);
+        return NULL;
+    }
+
+    // read file contents till end of file
+    fread(input, sizeof(bigsi_t), 1, infile);
+
+    // close file
+    fclose(infile);
+
     return 0;
 }
