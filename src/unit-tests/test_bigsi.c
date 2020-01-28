@@ -21,15 +21,17 @@
 #define ERR_iterator "iterator and insert mismatch"
 #define ERR_empty_index "allowed empty BIGSI to be indexed"
 #define ERR_empty_index2 "bigsIndex returned empty index"
+#define ERR_bigsi_dump "wrote unindexed bigsi to disk"
+#define ERR_bigsi_flushed_unindexed "flushed an unindexed bigsi"
+#define ERR_bigsi_flush "could not write bigsi to disk"
+#define ERR_bigsi_load "could not load bigsi from disk"
 #define ERR_query_init "can't assign memory for query result"
 #define ERR_query "query failed"
 #define ERR_bitvector_clear "could not clear bit vector"
 #define ERR_query_fp "bigsi false positive"
 #define ERR_query_fn "bigsi false negative"
 #define ERR_bitvector_get "could not run bvGet"
-#define ERR_bigsi_dump "wrote unindexed bigsi to disk"
-#define ERR_bigsi_dump2 "could not write bigsi to disk"
-#define ERR_bigsi_load "could not load bigsi from disk"
+#define ERR_colour_lookup "could not run a colour lookup"
 
 int tests_run = 0;
 
@@ -39,7 +41,7 @@ int tests_run = 0;
 static char *test_bigsInit()
 {
   // init a BIGSI
-  bigsi_t *tmp = bigsInit(BIT_NUM, HASH_NUM);
+  bigsi_t *tmp = bigsInit(BIT_NUM, HASH_NUM, ".");
   if (tmp == 0 || tmp->numBits != BIT_NUM)
   {
     return ERR_init;
@@ -61,14 +63,13 @@ static char *test_bigsInit()
   neither sequence will contain k-mer D (ccc)
 
 */
-static char *test_bigsAdd()
+static char *test_bigsIndex()
 {
 
   // 3 dummy k-mers
   char kmerA[] = "act";
   char kmerB[] = "ggg";
   char kmerC[] = "cgt";
-  char kmerD[] = "ccc";
 
   // create 2 sequence bloom filters
   bloomfilter_t *bloomSeq1 = bfInit(2000, 0.01);
@@ -82,7 +83,7 @@ static char *test_bigsAdd()
   bfAdd(bloomSeq2, &kmerC, 3);
 
   // init a BIGSI
-  bigsi_t *bigsi = bigsInit(bvCapacity(bloomSeq1->bitvector), bloomSeq1->numHashes);
+  bigsi_t *bigsi = bigsInit(bvCapacity(bloomSeq1->bitvector), bloomSeq1->numHashes, ".");
 
   // check that an index operation can't be performed before bit vectors have been added
   if (bigsIndex(bigsi) != -1)
@@ -124,11 +125,45 @@ static char *test_bigsAdd()
   bfDestroy(bloomSeq2);
   map_deinit(&bfMap);
 
+  // make sure you can't flush before indexing
+  if (bigsFlush(bigsi) == 0)
+  {
+    return ERR_bigsi_flushed_unindexed;
+  }
+
   // run the indexing function
   if (bigsIndex(bigsi) != 0)
   {
     return ERR_empty_index2;
   }
+
+  // save to disk and free
+  if (bigsFlush(bigsi) != 0)
+  {
+    return ERR_bigsi_flush;
+  }
+
+  return 0;
+}
+
+/*
+  test the BIGSI load and query
+*/
+static char *test_bigsQuery()
+{
+
+  // load the previous BIGSI
+  bigsi_t *bigsi;
+  if ((bigsi = bigsLoad(".")) == NULL)
+  {
+    return ERR_bigsi_load;
+  }
+
+  // set up queries
+  char kmerA[] = "act"; // contained in sequence 1
+  char kmerB[] = "ggg"; // contained in sequence 1
+  char kmerC[] = "cgt"; // contained in sequence 2
+  char kmerD[] = "ccc"; // not in either sequence
 
   // get the result ready
   bitvector_t *result = bvInit(bigsi->colourIterator);
@@ -163,120 +198,52 @@ static char *test_bigsAdd()
     return ERR_query_fn;
   }
 
-  // check the colour matches the seqID
-  int correctMatch = 0;
-  for (int colour = 0; colour < bigsi->colourIterator; colour++)
+  // iterate over set bits in result
+  /*
+  TODO: this is not how we will ultimately check results
+  */
+  int fnCheck = 0;
+  for (int colour = 0; colour < result->capacity; colour++)
   {
-    uint8_t bitCheck = 0;
-    if (bvGet(result, colour, &bitCheck) != 0)
+    uint8_t bitVal = 0;
+    if (bvGet(result, colour, &bitVal) != 0)
     {
       return ERR_bitvector_get;
     }
-    if (bitCheck == 1)
+    if (bitVal == 1)
     {
-      fprintf(stdout, "query match for colour: %u\n", colour);
-      fprintf(stdout, "equates to sequence ID: %s\n", bigsi->colourArray[colour]);
-      if (strcmp(bigsi->colourArray[colour], "sequence 1"))
+      // get the colour -> seqID
+      char *seqID;
+      if (bigsLookupColour(bigsi, colour, &seqID) != 0)
+      {
+        return ERR_colour_lookup;
+      }
+      if (strcmp(seqID, "sequence 1") != 0)
       {
         return ERR_query_fp;
       }
       else
       {
-        correctMatch = 1;
+        fnCheck = 1;
       }
+      free(seqID);
     }
   }
-  if (correctMatch != 1)
+  if (fnCheck != 1)
   {
     return ERR_query_fn;
   }
 
   // clean up the test
-  bigsDestroy(bigsi);
   bvDestroy(result);
-  return 0;
-}
-
-/*
-  test the BIGSI in/out disk operations
-*/
-static char *test_bigsIO()
-{
-
-  // 3 dummy k-mers
-  char kmerA[] = "act";
-  char kmerB[] = "ggg";
-  char kmerC[] = "cgt";
-  //char kmerD[] = "ccc";
-
-  // create 2 sequence bloom filters
-  bloomfilter_t *bloomSeq1 = bfInit(2000, 0.01);
-  bloomfilter_t *bloomSeq2 = bfInit(2000, 0.01);
-  if ((bloomSeq1 == NULL) || (bloomSeq2 == NULL))
+  if (bigsFlush(bigsi) != 0)
   {
-    return ERR_bloomfilter;
+    return ERR_bigsi_flush;
   }
-  bfAdd(bloomSeq1, &kmerA, 3);
-  bfAdd(bloomSeq1, &kmerB, 3);
-  bfAdd(bloomSeq2, &kmerC, 3);
-
-  // init a BIGSI
-  bigsi_t *bigsi = bigsInit(bvCapacity(bloomSeq1->bitvector), bloomSeq1->numHashes);
-
-  // create map for bit filters and add one
-  map_bloomfilter_t bfMap;
-  map_init(&bfMap);
-  map_set(&bfMap, "sequence 1", *bloomSeq1);
-  map_set(&bfMap, "sequence 2", *bloomSeq2);
-  if (bigsAdd(bigsi, bfMap, 2) != 0)
-  {
-    return ERR_insert;
-  }
-  if (bigsi->colourIterator != 2)
-  {
-    return ERR_iterator;
-  }
-
-  // bloom filters are now copied to BIGSI, delete originals
-  bfDestroy(bloomSeq1);
-  bfDestroy(bloomSeq2);
-  map_deinit(&bfMap);
-
-  // make sure you can't write an unindexed bigsi
-  if (bigsDump(bigsi, ".") != -1)
-  {
-    return ERR_bigsi_dump;
-  }
-
-  // run the indexing function
-  if (bigsIndex(bigsi) != 0)
-  {
-    return ERR_empty_index2;
-  }
-
-  // write the indexed BIGSI to disk
-  if (bigsDump(bigsi, ".") != 0)
-  {
-    return ERR_bigsi_dump2;
-  }
-
-  // delete the original BIGSI
-  bigsDestroy(bigsi);
-
-  // re-open the BDB and query it
-  bigsi_t *bigsi2;
-  if ((bigsi2 = bigsLoad(".")) != NULL)
-  {
-    return ERR_bigsi_load;
-  }
-
-  // clean up the test
-  bigsDestroy(bigsi2);
-  //bvDestroy(result);
+  remove(BIGSI_METADATA_FILENAME);
   remove(BITVECTORS_DB_FILENAME);
   remove(COLOURS_DB_FILENAME);
-
-  return 1;
+  return 0;
 }
 
 /*
@@ -285,8 +252,8 @@ static char *test_bigsIO()
 static char *all_tests()
 {
   mu_run_test(test_bigsInit);
-  mu_run_test(test_bigsAdd);
-  mu_run_test(test_bigsIO);
+  mu_run_test(test_bigsIndex);
+  mu_run_test(test_bigsQuery);
   return 0;
 }
 
