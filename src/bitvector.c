@@ -4,6 +4,8 @@
 
 #include "bitvector.h"
 
+#define MAX_MSG_SIZE 1024
+
 /*****************************************************************************
  * set macros for bit vector operations.
  */

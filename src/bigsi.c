@@ -34,9 +34,6 @@ bigsi_t *bigsInit(int numBits, int numHashes)
         newIndex->numHashes = numHashes;
         newIndex->colourIterator = 0;
         newIndex->index = NULL;
-
-        // work out how many bytes are needed to store numBits
-        newIndex->numBytes = ((numBits - 1) % 8) + 1;
     }
     return newIndex;
 }
@@ -142,6 +139,11 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
 
         // increment the colour iterator
         bigsi->colourIterator++;
+        if (bigsi->colourIterator == MAX_COLOURS)
+        {
+            fprintf(stderr, "maximum number of colours reached\n");
+            return -1;
+        }
 
         // increment the map checker
         inputMapCheck++;
@@ -310,8 +312,6 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
     {
         hv = getHashVal(buffer, len, i, bigsi->numBits);
 
-        fprintf(stderr, "query for: %s, hash %u = %u\n", ((char *)buffer), i, hv);
-
         // get the corresponding bit vector in the bigsi index
         if (!bigsi->index[hv])
         {
@@ -422,24 +422,87 @@ int bigsDestroy(bigsi_t *bigsi)
  */
 int bigsDump(bigsi_t *bigsi, const char *filepath)
 {
-
-    // open file for writing
-    FILE *outfile = fopen(filepath, "w");
-    if (!outfile)
+    // check the index is okay
+    if (!bigsi)
     {
-        fprintf(stderr, "can't open file for writing: %s\n", filepath);
+        fprintf(stderr, "no BIGSI was provided to bigsDump\n");
+        return -1;
+    }
+    if (!bigsi->index)
+    {
+        fprintf(stderr, "must index BIGSI before running bigsDump\n");
         return -1;
     }
 
-    // write struct to file
-    if (fwrite(bigsi, sizeof(*bigsi), 1, outfile) == 0)
+    // initialize the STOCK_DBS struct
+    int ret;
+    u_int32_t keyFlags;
+    BIGSI_DB_t my_stock;
+    initialize_stockdbs(&my_stock, filepath);
+
+    // identify the files that will hold our databases
+    set_db_filenames(&my_stock);
+
+    // open all databases
+    u_int32_t openFlags;
+    openFlags = DB_CREATE | DB_EXCL;
+    ret = databases_setup(&my_stock, PROG_NAME, stderr, openFlags);
+    if (ret)
     {
-        fprintf(stderr, "can't write BIGSI to file: %s\n", filepath);
+        fprintf(stderr, "could not open up berkeley databases (%u)\n", ret);
         return -1;
     }
 
-    // close file
-    fclose(outfile);
+    // add the colours to the database
+    DBT key, data;
+    keyFlags = DB_APPEND;
+    for (int i = 0; i < bigsi->colourIterator; i++)
+    {
+        // zero out the DBTs
+        memset(&key, 0, sizeof(DBT));
+        memset(&data, 0, sizeof(DBT));
+
+        // set up the database record's key
+        key.data = &i;
+        key.size = sizeof(i);
+
+        // set up the database record's data
+        data.data = bigsi->colourArray[i];
+        data.size = (u_int32_t)strlen(bigsi->colourArray[i]) + 1;
+
+        // add it
+        if (my_stock.colours_dbp->put(my_stock.colours_dbp, NULL, &key, &data, keyFlags))
+        {
+            fprintf(stderr, "could not add colour to database: %u -> %s\n", *(int *)key.data, (char *)data.data);
+            return -1;
+        }
+    }
+
+    // add the bit vectors to the database
+    for (int i = 0; i < bigsi->numBits; i++)
+    {
+        // zero out the DBTs
+        memset(&key, 0, sizeof(DBT));
+        memset(&data, 0, sizeof(DBT));
+
+        // set up the database record's key
+        key.data = &i;
+        key.size = sizeof(i);
+
+        // set up the database record's data
+        data.data = bigsi->index[i];
+        data.size = (sizeof(bitvector_t) + (sizeof(uint8_t) * bigsi->index[i]->bufSize));
+
+        // add it
+        if (my_stock.bitvectors_dbp->put(my_stock.bitvectors_dbp, NULL, &key, &data, keyFlags))
+        {
+            fprintf(stderr, "could not add bit vector to database: %u\n", *(int *)key.data);
+            return -1;
+        }
+    }
+
+    // close our environment and databases
+    databases_close(&my_stock);
     return 0;
 }
 
@@ -458,21 +521,172 @@ int bigsDump(bigsi_t *bigsi, const char *filepath)
  */
 bigsi_t *bigsLoad(const char *filepath)
 {
-    bigsi_t *input = bigsInit(1, 1);
+    // initialize the STOCK_DBS struct
+    int ret;
+    u_int32_t keyFlags;
+    BIGSI_DB_t my_stock;
+    initialize_stockdbs(&my_stock, filepath);
 
-    // open file for reading
-    FILE *infile = fopen(filepath, "r");
-    if (infile == NULL)
+    // identify the files that will hold our databases
+    set_db_filenames(&my_stock);
+
+    // open all databases
+    u_int32_t openFlags;
+    openFlags = DB_RDONLY;
+    ret = databases_setup(&my_stock, PROG_NAME, stderr, openFlags);
+    if (ret)
     {
-        fprintf(stderr, "can't open file for reading: %s\n", filepath);
+        fprintf(stderr, "could not open up berkeley databases (%u)\n", ret);
         return NULL;
     }
 
-    // read file contents till end of file
-    fread(input, sizeof(bigsi_t), 1, infile);
+    DBT key, data;
+    memset(&key, 0, sizeof(key));
+    memset(&data, 0, sizeof(data));
+    keyFlags = 0;
 
-    // close file
-    fclose(infile);
+    /* Set up our DBTs */
+    int testSearch = 1;
+    key.data = &testSearch;
+    key.size = sizeof(testSearch);
+    data.data = NULL;
+    data.size = 0;
 
+    if ((ret = my_stock.colours_dbp->get(my_stock.colours_dbp, NULL, &key, &data, 0)) == 0)
+    {
+        fprintf(stderr, "found it mofo\n");
+        fprintf(stderr, "result = %s\n", (char *)data.data);
+    }
+    else
+    {
+        fprintf(stderr, "doh\n");
+    }
+
+    databases_close(&my_stock);
+
+    // dont want to return this - need to decide how to use the db
+    bigsi_t *loadedBIGSI = NULL;
+    return loadedBIGSI;
+}
+
+//////////////////
+/////////
+//////////
+////////
+
+/* Initializes the STOCK_DBS struct.*/
+void initialize_stockdbs(BIGSI_DB_t *my_stock, const char *filepath)
+{
+    my_stock->db_home_dir = filepath;
+    my_stock->bitvectors_dbp = NULL;
+    my_stock->colours_dbp = NULL;
+    my_stock->bitvectors_db_name = NULL;
+    my_stock->colours_db_name = NULL;
+}
+
+/* Identify all the files that will hold our databases. */
+void set_db_filenames(BIGSI_DB_t *my_stock)
+{
+    size_t size;
+
+    /* Create the Inventory DB file name */
+    size = strlen(my_stock->db_home_dir) + strlen(BITVECTORS_DB_FILENAME) + 2;
+    my_stock->bitvectors_db_name = malloc(size);
+    snprintf(my_stock->bitvectors_db_name, size, "%s/%s", my_stock->db_home_dir, BITVECTORS_DB_FILENAME);
+
+    /* Create the Vendor DB file name */
+    size = strlen(my_stock->db_home_dir) + strlen(COLOURS_DB_FILENAME) + 2;
+    my_stock->colours_db_name = malloc(size);
+    snprintf(my_stock->colours_db_name, size, "%s/%s", my_stock->db_home_dir, COLOURS_DB_FILENAME);
+}
+
+/* open_database is a generic function to open a berkeley db database */
+int open_database(DB **dbpp,                /* The DB handle that we are opening */
+                  const char *filename,     /* The file in which the db lives */
+                  const char *program_name, /* Name of the program calling this function */
+                  FILE *error_file_pointer, /* File where we want error messages sent */
+                  u_int32_t openFlags)      /* The flags to open the DB with */
+{
+    DB *dbp;
+    int ret;
+
+    // initialize the DB handle
+    ret = db_create(&dbp, NULL, 0);
+    if (ret != 0)
+    {
+        fprintf(error_file_pointer, "%s: %s\n", program_name, db_strerror(ret));
+        return (ret);
+    }
+
+    // point to the memory malloc'd by db_create()
+    *dbpp = dbp;
+
+    // set up error handling for this database
+    dbp->set_errfile(dbp, error_file_pointer);
+    dbp->set_errpfx(dbp, program_name);
+
+    // open the database
+    ret = dbp->open(dbp,       /* Pointer to the database */
+                    NULL,      /* Txn pointer */
+                    filename,  /* File name */
+                    NULL,      /* Logical db name (unneeded) */
+                    DB_RECNO,  /* Database type (using queue) */
+                    openFlags, /* Open flags */
+                    0);        /* File mode. Using defaults */
+    if (ret != 0)
+    {
+        dbp->err(dbp, ret, "failed to open '%s'", filename);
+        return (ret);
+    }
+    return 0;
+}
+
+/* opens all bigsi databases */
+int databases_setup(BIGSI_DB_t *my_stock, const char *program_name, FILE *error_file_pointer, u_int32_t openFlags)
+{
+    int ret;
+
+    // open the colours database
+    ret = open_database(&(my_stock->colours_dbp), my_stock->colours_db_name, program_name, error_file_pointer, openFlags);
+
+    // error reporting is handled in open_database() so just return the return code here
+    if (ret != 0)
+    {
+        return (ret);
+    }
+
+    // open the bit vectors database
+    ret = open_database(&(my_stock->bitvectors_dbp), my_stock->bitvectors_db_name, program_name, error_file_pointer, openFlags);
+
+    // error reporting is handled in open_database() so just return the return code here
+    if (ret != 0)
+    {
+        return (ret);
+    }
+    return 0;
+}
+
+/* closes all the bigsi databases */
+int databases_close(BIGSI_DB_t *my_stock)
+{
+    int ret;
+
+    // Note: closing a database automatically flushes its cached data to disk, so no sync is required here
+    if (my_stock->colours_dbp != NULL)
+    {
+        ret = my_stock->colours_dbp->close(my_stock->colours_dbp, 0);
+        if (ret != 0)
+        {
+            fprintf(stderr, "Inventory database close failed: %s\n", db_strerror(ret));
+        }
+    }
+    if (my_stock->bitvectors_dbp != NULL)
+    {
+        ret = my_stock->bitvectors_dbp->close(my_stock->bitvectors_dbp, 0);
+        if (ret != 0)
+        {
+            fprintf(stderr, "Vendor database close failed: %s\n", db_strerror(ret));
+        }
+    }
     return 0;
 }

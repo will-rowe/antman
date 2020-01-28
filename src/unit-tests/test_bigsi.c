@@ -27,6 +27,9 @@
 #define ERR_query_fp "bigsi false positive"
 #define ERR_query_fn "bigsi false negative"
 #define ERR_bitvector_get "could not run bvGet"
+#define ERR_bigsi_dump "wrote unindexed bigsi to disk"
+#define ERR_bigsi_dump2 "could not write bigsi to disk"
+#define ERR_bigsi_load "could not load bigsi from disk"
 
 int tests_run = 0;
 
@@ -204,7 +207,7 @@ static char *test_bigsIO()
   char kmerA[] = "act";
   char kmerB[] = "ggg";
   char kmerC[] = "cgt";
-  char kmerD[] = "ccc";
+  //char kmerD[] = "ccc";
 
   // create 2 sequence bloom filters
   bloomfilter_t *bloomSeq1 = bfInit(2000, 0.01);
@@ -239,83 +242,41 @@ static char *test_bigsIO()
   bfDestroy(bloomSeq2);
   map_deinit(&bfMap);
 
+  // make sure you can't write an unindexed bigsi
+  if (bigsDump(bigsi, ".") != -1)
+  {
+    return ERR_bigsi_dump;
+  }
+
   // run the indexing function
   if (bigsIndex(bigsi) != 0)
   {
     return ERR_empty_index2;
   }
 
-  /*
-can now write to disk
-read from disk
-check queries as prev func
-  */
-
-  // get the result ready
-  bitvector_t *result = bvInit(bigsi->colourIterator);
-  if (result == NULL)
+  // write the indexed BIGSI to disk
+  if (bigsDump(bigsi, ".") != 0)
   {
-    return ERR_query_init;
+    return ERR_bigsi_dump2;
   }
 
-  // run the query function on a k-mer which isn't in BIGSI
-  if (bigsQuery(bigsi, &kmerD, 3, result))
-  {
-    return ERR_query;
-  }
-  if (bvCount(result) != 0)
-  {
-    return ERR_query_fp;
-  }
+  // delete the original BIGSI
+  bigsDestroy(bigsi);
 
-  // wipe the result bit vector
-  if (bvClear(result) != 0)
+  // re-open the BDB and query it
+  bigsi_t *bigsi2;
+  if ((bigsi2 = bigsLoad(".")) != NULL)
   {
-    return ERR_bitvector_clear;
-  }
-
-  // run the query function on a k-mer that is in BIGSI
-  if (bigsQuery(bigsi, &kmerB, 3, result))
-  {
-    return ERR_query;
-  }
-  if (bvCount(result) == 0)
-  {
-    return ERR_query_fn;
-  }
-
-  // check the colour matches the seqID
-  int correctMatch = 0;
-  for (int colour = 0; colour < bigsi->colourIterator; colour++)
-  {
-    uint8_t bitCheck = 0;
-    if (bvGet(result, colour, &bitCheck) != 0)
-    {
-      return ERR_bitvector_get;
-    }
-    if (bitCheck == 1)
-    {
-      fprintf(stdout, "query match for colour: %u\n", colour);
-      fprintf(stdout, "equates to sequence ID: %s\n", bigsi->colourArray[colour]);
-      if (strcmp(bigsi->colourArray[colour], "sequence 1"))
-      {
-        return ERR_query_fp;
-      }
-      else
-      {
-        correctMatch = 1;
-      }
-    }
-  }
-  if (correctMatch != 1)
-  {
-    return ERR_query_fn;
+    return ERR_bigsi_load;
   }
 
   // clean up the test
-  bigsDestroy(bigsi);
-  bvDestroy(result);
-  return 0;
+  bigsDestroy(bigsi2);
+  //bvDestroy(result);
+  remove(BITVECTORS_DB_FILENAME);
+  remove(COLOURS_DB_FILENAME);
+
+  return 1;
 }
 
 /*

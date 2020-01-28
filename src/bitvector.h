@@ -36,7 +36,6 @@ void bvPrint(bitvector_t *bv);
 int bvBAND(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
 int bvBOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
 int bvXOR(const bitvector_t *bv1, const bitvector_t *bv2, bitvector_t *result);
-
 int bvBANDupdate(bitvector_t *bv1, const bitvector_t *bv2);
 
 #endif
