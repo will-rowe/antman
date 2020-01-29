@@ -14,11 +14,13 @@ matrix:
           packages:
           - automake
           - fswatch
+          - berkeley-db
     - os: linux
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - libdb4.8-dev
       before_install:
         - sudo apt-get update -qq
         - sudo ./scripts/install-fswatch.sh
