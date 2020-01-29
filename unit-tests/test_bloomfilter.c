@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../bloomfilter.h"
+#include "../src/bloomfilter.h"
 
 #define CAPACITY 2000
 #define COLLISION_PROB 0.01

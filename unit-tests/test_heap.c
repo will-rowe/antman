@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../heap.c"
+#include "../src/heap.c"
 
 #define ERR_initHeap1 "could not init a heap"
 #define ERR_initHeap2 "could not access heap minimum"

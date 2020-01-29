@@ -9,7 +9,7 @@
 #include "bloomfilter.h"
 #include "daemonize.h"
 #include "sequence.h"
-#include "slog.h"
+#include "3rd-party/slog.h"
 #include "workerpool.h"
 
 // TODO: set these values by the cli

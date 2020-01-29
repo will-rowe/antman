@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
-#include "slog.h"
-#include "kseq.h"
+
+#include "3rd-party/slog.h"
+#include "3rd-party/kseq.h"
 #include "sketch.h"
 #include "sequence.h"
 #include "watcher.h"

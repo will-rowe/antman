@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 
 #include "config.h"
-#include "frozen.h"
+#include "3rd-party/frozen.h"
 
 // initConfig
 config_t *initConfig()

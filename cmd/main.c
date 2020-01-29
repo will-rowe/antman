@@ -7,13 +7,13 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "ketopt.h"
-#include "bloomfilter.h"
-#include "config.h"
-#include "daemonize.h"
-#include "sequence.h"
-#include "slog.h"
-#include "watcher.h"
+#include "../src/3rd-party/ketopt.h"
+#include "../src/bloomfilter.h"
+#include "../src/config.h"
+#include "../src/daemonize.h"
+#include "../src/sequence.h"
+#include "../src/3rd-party/slog.h"
+#include "../src/watcher.h"
 
 /*
    greet prints the program name and version
@@ -21,7 +21,7 @@
 void greet()
 {
     printf("=======================================================\n");
-    printf("ANTMAN (version: %s)\n", PROG_VERSION);
+    printf("%s (version: %s)\n", PROG_NAME, PROG_VERSION);
     printf("=======================================================\n");
 }
 
@@ -30,17 +30,18 @@ void greet()
 */
 void printUsage(void)
 {
-    printf("usage:\tantman [flags]\n\n"
+    printf("usage:\t%s [flags]\n\n"
            "flags:\n"
            "\t --setWatchDir=<path>                 \t set the watch directory (default: %s)\n"
            "\t --setWhiteList=<path/filename>      \t set the white list\n"
            "\t --setLog=<path/filename>            \t set the log file\n"
-           "\t --start                              \t start the antman daemon\n"
-           "\t --stop                               \t stop the antman daemon\n"
-           "\t --getPID                             \t prints PID of the antman daemon and exits\n"
+           "\t --start                              \t start the daemon\n"
+           "\t --stop                               \t stop the daemon\n"
+           "\t --getPID                             \t prints PID of the daemon and exits\n"
            "\n"
            "\t -h                                   \t prints this help and exits\n"
            "\t -v                                   \t prints version number and exits\n",
+           PROG_NAME,
            DEFAULT_WATCH_DIR);
 }
 

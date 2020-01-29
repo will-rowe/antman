@@ -16,10 +16,10 @@ ANTMAN is a system daemon that will collect nanopore reads as they are basecalle
 
 Currently, the daemon will:
 
-* watch a directory
-* detect new FASTQ files and add to a processing queue
-* sketch the reads (using KMV MinHash)
-* run a containment search against a reference sequence
+- watch a directory
+- detect new FASTQ files and add to a processing queue
+- sketch the reads (using KMV MinHash)
+- run a containment search against a reference sequence
 
 ## Quickstart
 

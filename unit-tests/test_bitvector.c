@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../bitvector.h"
+#include "../src/bitvector.h"
 
 #define CAPACITY 10
 #define CAPACITY_IN_BYTES 2

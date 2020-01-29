@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../config.h"
-#include "../frozen.h"
+#include "../src/config.h"
+#include "../src/3rd-party/frozen.h"
 
 #define TMP_CONFIG "./tmp.config"
 #define ERR_initConf1 "could not init a config instance"

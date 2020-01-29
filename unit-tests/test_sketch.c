@@ -6,11 +6,10 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../sketch.c"
-#include "../hashmap.c"
-#include "../heap.c"
-#include "../bloom.c"
-#include "../murmurhash2.c"
+#include "../src/sketch.c"
+#include "../src/hashmap.c"
+#include "../src/heap.c"
+#include "../src/bloomfilter.c"
 
 #define ERR_sketchRead1 "could not sketch read"
 #define ERR_initHashMap1 "hashmap was overfilled"

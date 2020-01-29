@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "bloomfilter.h"
-#include "murmurhash3.h"
+#include "3rd-party/murmurhash3.h"
 
 /*****************************************************************************
  * set helper functions.

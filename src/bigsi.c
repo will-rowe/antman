@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "bigsi.h"
-#include "frozen.h"
+#include "3rd-party/frozen.h"
 
 /*****************************************************************************
  * bigsInit will initiate a BIGSI.

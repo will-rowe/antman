@@ -5,10 +5,10 @@
 #include <stdio.h>
 
 #include "minunit.h"
-#include "../bigsi.h"
-#include "../bitvector.h"
-#include "../bloomfilter.h"
-#include "../map.h"
+#include "../src/bigsi.h"
+#include "../src/bitvector.h"
+#include "../src/bloomfilter.h"
+#include "../src/3rd-party/map.h"
 
 #define BIT_NUM 10
 #define HASH_NUM 1
@@ -160,9 +160,9 @@ static char *test_bigsQuery()
   }
 
   // set up queries
-  char kmerA[] = "act"; // contained in sequence 1
+  //char kmerA[] = "act"; // contained in sequence 1
   char kmerB[] = "ggg"; // contained in sequence 1
-  char kmerC[] = "cgt"; // contained in sequence 2
+  //char kmerC[] = "cgt"; // contained in sequence 2
   char kmerD[] = "ccc"; // not in either sequence
 
   // get the result ready

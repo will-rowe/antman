@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 #include "bloomfilter.h"
-#include "slog.h"
+#include "3rd-party/slog.h"
 
 // TODO: these are temp defines until the CLI is finished
 #define AM_DEFAULT_K_SIZE 7

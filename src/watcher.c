@@ -3,7 +3,7 @@
 
 #include "watcher.h"
 #include "sequence.h"
-#include "slog.h"
+#include "3rd-party/slog.h"
 
 // getExt takes a filename and returns the extension
 char *getExt(const char *filename)

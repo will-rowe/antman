@@ -19,7 +19,8 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 # Checks for libraries
-AC_CHECK_LIB([pthread], [pthread_create])
+AC_CHECK_LIB([pthread], [pthread_create], [], [AC_MSG_ERROR([Unable to find the pthread library.])])
+AC_CHECK_LIB([db], [db_create], [], [AC_MSG_ERROR([Unable to find the Berkeley DB library.])])
 AC_CHECK_LIB([fswatch], [fsw_init_session], [], [AC_MSG_ERROR([Unable to find the fswatch library - supply with LDFLAGS.])])
 AC_CHECK_LIB([fswatch], [fsw_start_monitor], [], [AC_MSG_ERROR([Unable to find the fswatch library - supply with LDFLAGS.])])
 
@@ -33,6 +34,6 @@ AC_SUBST([CONFIG_LOCATION], ["/tmp/.antman.config"])
 AC_SUBST([DEFAULT_WATCH_DIR], ["/var/lib/MinKNOW/data/reads"])
 
 # Donzo
-AC_CONFIG_FILES([Makefile src/Makefile src/unit-tests/Makefile])
+AC_CONFIG_FILES([Makefile unit-tests/Makefile])
 
 AC_OUTPUT()

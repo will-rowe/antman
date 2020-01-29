@@ -30,7 +30,7 @@
 
 #include "bloomfilter.h"
 #include "bitvector.h"
-#include "map.h"
+#include "3rd-party/map.h"
 
 #define MAX_COLOURS INT_MAX       // the maximum number of colours a BIGSI can store
 #define BERKELEY_DB_TYPE DB_BTREE // the type of Berkeley database to use
