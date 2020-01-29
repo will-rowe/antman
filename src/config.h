@@ -1,3 +1,7 @@
+/*****************************************************************************
+ * Package config is used to orchestrate the deamon, serialise and load
+ * runtime information.
+ */
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -10,9 +14,9 @@
 #define AM_DEFAULT_BLOOM_FP_RATE 0.001
 #define AM_DEFAULT_BLOOM_MAX_EL 100000
 
-/*
-    config_t is used to record the minimum information required by antman
-*/
+/*****************************************************************************
+ * config_t is used to record the minimum information required by antman
+ */
 typedef struct config
 {
     char *filename;
@@ -29,9 +33,9 @@ typedef struct config
     bloomfilter_t *bloom_filter;
 } config_t;
 
-/*
-    function prototypes
-*/
+/*****************************************************************************
+ * function prototypes
+ */
 config_t *initConfig();
 void destroyConfig(config_t *config);
 int writeConfig(config_t *config, char *configFile);

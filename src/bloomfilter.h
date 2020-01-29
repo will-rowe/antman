@@ -8,7 +8,7 @@
 #include "bitvector.h"
 
 /*****************************************************************************
- * bloom filter struct
+ * bloomfilter_t is the main data structure
  */
 typedef struct BloomFilter
 {

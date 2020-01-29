@@ -1,4 +1,9 @@
-// simple hash map which uses linear probing to keep track of what hash values are currently in a KMV sketch
+/*****************************************************************************
+ * Package hashmap is a simple hash map that uses linear probing.
+ * 
+ * Currently this is only used to keep track of values in the KMV sketch
+ * package.
+ */
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
@@ -7,12 +12,17 @@
 
 #define HASHMAP_SIZE 256
 
-//
-typedef struct kmer kmer;
+/*****************************************************************************
+ * kmer_t is the hashed k-mer being kept in the KMV sketch
+ */
+typedef struct KMER
+{
+    uint64_t kmerHash;
+} kmer_t;
 
-/*
-    function prototypes
-*/
+/*****************************************************************************
+ * function prototypes
+ */
 bool hmInsert(uint64_t kmerHash);
 bool hmSearch(uint64_t kmerHash);
 void hmDelete(uint64_t kmerHash);

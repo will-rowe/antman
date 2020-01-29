@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 /*****************************************************************************
- * bit vector struct
+ * bitvector_t is the main data structure
  */
 typedef struct BitVector
 {

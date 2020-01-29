@@ -1,14 +1,15 @@
+/*****************************************************************************
+ * Package daemonize is used to control the daemon.
+ */
 #ifndef DAEMONIZE_H
 #define DAEMONIZE_H
-
-#include <libfswatch/c/libfswatch.h>
 
 #include "config.h"
 #include "watcher.h"
 
-/*
-    function prototypes
-*/
+/*****************************************************************************
+ * function prototypes
+ */
 void sigTermHandler(int signum);
 void catchSigterm();
 void *startWatching(void *param);
