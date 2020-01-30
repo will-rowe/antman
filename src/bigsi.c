@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "bigsi.h"
 #include "3rd-party/frozen.h"
+
+#include "bigsi.h"
 
 /*****************************************************************************
  * bigsInit will initiate a BIGSI.
@@ -493,7 +494,7 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
     }
 
     // set up the result
-    *result = (char *)malloc((int)seqID.size);
+    *result = malloc((int)seqID.size);
     if (*result == NULL)
     {
         fprintf(stderr, "could not allocate memory for sequence ID retrieval\n");
