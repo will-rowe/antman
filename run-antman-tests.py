@@ -29,10 +29,10 @@ with open('./VERSION') as f:
 if progVersion.rstrip('\n') != codeVersion:
     sys.exit("---\nerror: compiled version number does not match codebase ({} vs. {})." .format(progVersion.rstrip('\n'), codeVersion))
 
-# check --setWhiteList
+# check set subcommand
+print("checking set subcommand")
 print("setting white list...")
 
-# check --setWatchDir
 print("setting watch dir...")
 try:
     setWatchDir = subprocess.run(['antman', 'set', '-w', '/tmp'], stdout=subprocess.PIPE)
@@ -40,7 +40,17 @@ except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to set watch directory (error code: {})." .format(errorCode))
 
-# check daemonization
+# check sketch subcommand
+print("checking sketch subcommand")
+try:
+    setWatchDir = subprocess.run(['antman', 'sketch', '-o', '/tmp', 'misc/data/NiV_6_Malaysia.fasta'], stdout=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
+    errorCode = e.returncode
+    sys.exit("---\nerror: failed to run sketch command (error code: {})." .format(errorCode))
+
+"""
+
+# check shrink subcommand
 print("checking daemonization...")
 # first make sure we can get pid
 try:
@@ -84,5 +94,7 @@ try:
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to stop antman (error code: {})." .format(errorCode))
+
+"""
 
 print("---\npassed all tests.")
