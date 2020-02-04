@@ -523,6 +523,8 @@ int main(int argc, char *argv[])
         slog(0, SLOG_INFO, "\t- number of colours in BIGSI: %u", config->bigsi->colourIterator);
 
         // run the shrink function
+        shrink(config);
+
         // TODO: I'm keeping all of this in the main function for now
         // wargs seems unecessary when I have an in-memory config
         // set up the watch directory
@@ -576,7 +578,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "error: can't stop a daemon that is not running\n\n");
             return -1;
         }
-        int retVal = stopDaemon(config);
+        int retVal = stop(config);
         destroyConfig(config);
         return retVal;
     }

@@ -31,43 +31,38 @@ if progVersion.rstrip('\n') != codeVersion:
 
 # check --setWhiteList
 print("setting white list...")
-try:
-    setWhiteList = subprocess.run(['antman', '--setWhiteList=misc/data/NiV_6_Malaysia.fasta'], stdout=subprocess.PIPE)
-except subprocess.CalledProcessError as e:
-    errorCode = e.returncode
-    sys.exit("---\nerror: failed to call `antman --setWhiteList=misc/data/NiV_6_Malaysia.fasta` (error code: {})." .format(errorCode))
 
 # check --setWatchDir
 print("setting watch dir...")
 try:
-    setWatchDir = subprocess.run(['antman', '--setWatchDir=/tmp'], stdout=subprocess.PIPE)
+    setWatchDir = subprocess.run(['antman', 'set', '-w', '/tmp'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
-    sys.exit("---\nerror: failed to call `antman --setWatchDir=/tmp` (error code: {})." .format(errorCode))
+    sys.exit("---\nerror: failed to set watch directory (error code: {})." .format(errorCode))
 
 # check daemonization
 print("checking daemonization...")
 # first make sure we can get pid
 try:
-    getPID = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
+    getPID = subprocess.run(['antman', 'info', '-p'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
-    sys.exit("---\nerror: failed to call `antman --getPID` (error code: {})." .format(errorCode))
+    sys.exit("---\nerror: failed to get PID (error code: {})." .format(errorCode))
 # next make sure it is -1 as antman shouldn't be running
 pid = getPID.stdout.decode('utf-8').rstrip('\n')
 if pid != "-1":
     sys.exit("---\nerror: antman daemon shouldn't have a PID yet (got: {})." .format(pid))
 # now start antman and get pid
 try:
-    startAM = subprocess.run(['antman', '--start'], stdout=subprocess.PIPE)
+    startAM = subprocess.run(['antman', 'shrink'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to start antman (error code: {})." .format(errorCode))
 try:
-    getPID2 = subprocess.run(['antman', '--getPID'], stdout=subprocess.PIPE)
+    getPID2 = subprocess.run(['antman', 'info', '-p'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
-    sys.exit("---\nerror: failed to call `antman --getPID` (error code: {})." .format(errorCode))
+    sys.exit("---\nerror: failed to get PID (error code: {})." .format(errorCode))
 pid = getPID2.stdout.decode('utf-8').rstrip('\n')
 if pid == "-1":
     sys.exit("---\nerror: antman did not start and failed to issue a launch error")
@@ -85,7 +80,7 @@ else:
 
 # now stop antman
 try:
-    output7 = subprocess.run(['antman', '--stop'], stdout=subprocess.PIPE)
+    output7 = subprocess.run(['antman', 'stop'], stdout=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     errorCode = e.returncode
     sys.exit("---\nerror: failed to stop antman (error code: {})." .format(errorCode))

@@ -1,6 +1,6 @@
 
 /*****************************************************************************
- * subcommands contains all the subcommands and necessary helper functions.
+ * subcommands contains subcommands and necessary helper functions.
  */
 #ifndef SUBCMDS_H
 #define SUBCMDS_H
@@ -16,9 +16,10 @@
 // subcommands
 int sketch(config_t *config, char *filePath);
 int info(config_t *config, bool pidOnly);
+int stop(config_t *amConfig);
+int shrink(config_t *amConfig);
 
-// helper functions
+// helpers
 int checkPID(config_t *amConfig);
-int stopDaemon(config_t *amConfig);
 
 #endif

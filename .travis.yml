@@ -28,5 +28,6 @@ script:
   - make
   - make check
   - sudo make install
+  - antman -h
   - ./run-antman-tests.py
   - make clean
