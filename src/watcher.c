@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "3rd-party/slog.h"
+
 #include "watcher.h"
 #include "sequence.h"
-#include "3rd-party/slog.h"
 
 // getExt takes a filename and returns the extension
 char *getExt(const char *filename)
@@ -84,7 +85,7 @@ void watcherCallback(fsw_cevent const *const events, const unsigned int event_nu
                 slog(0, SLOG_ERROR, "could not allocate watcher arguments");
             wargs2->workerPool = wargs->workerPool;
             wargs2->bloomFilter = wargs->bloomFilter;
-            wargs2->k_size = wargs->k_size;
+            wargs2->kSize = wargs->kSize;
             wargs2->sketch_size = wargs->sketch_size;
             wargs2->fp_rate = wargs2->fp_rate;
             strcpy(wargs2->filepath, events[i].path);

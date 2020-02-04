@@ -21,7 +21,7 @@ typedef struct watcherArgs
     tpool_t *workerPool;
     bloomfilter_t *bloomFilter;
     char filepath[50];
-    int k_size;
+    int kSize;
     int sketch_size;
     double fp_rate;
 } watcherArgs_t;

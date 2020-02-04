@@ -1,8 +1,9 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include "workerpool.h"
 #include "3rd-party/slog.h"
+
+#include "workerpool.h"
 
 /*
     the worker pool is a simple linked list which stores the function to call and its arguments

@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "bloomfilter.h"
 #include "3rd-party/murmurhash3.h"
+
+#include "bloomfilter.h"
 
 /*****************************************************************************
  * set helper functions.
@@ -82,6 +83,54 @@ unsigned int getHashVal(const void *buffer, int len, int iterator, int modulo)
 }
 
 /*****************************************************************************
+ * bfCalc will calculate the number of bits and hash functions required.
+ * 
+ * arguments:
+ *      estCapacity               - the maximum number of entries the bloom filter should expect
+ *      collisionProbability      - collision probibility
+ *      numBitsPtr                - pointer to numBits for result
+ *      numHashesPtr              - pointer to numHashes for result
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *      * Optimal number of bits is:
+ *        numBits = (entries * ln(error)) / ln(2)^2
+ * 
+ *      * Optimal number of hash functions is:
+ *        numHashes = bpe * ln(2)
+ */
+int bfCalc(uint64_t estCapacity, double collisionProbability, uint64_t *numBitsPtr, uint64_t *numHashesPtr)
+{
+
+  // check the requested capacity and error is okay
+  if (estCapacity < 1000)
+  {
+    fprintf(stderr, "estimated capacity must be > 1000\n");
+    return -1;
+  }
+  if (collisionProbability <= 0.0)
+  {
+    fprintf(stderr, "collision probability must be > 0.0\n");
+    return -1;
+  }
+
+  // calculate the required number of bits per element
+  // see: http://en.wikipedia.org/wiki/Bloom_filter
+  double num = log(collisionProbability);
+  double denom = 0.480453013918201; // ln(2)^2
+  double bitsPerElement = -(num / denom);
+
+  // create the bit vector
+  *numBitsPtr = (uint64_t)((double)estCapacity * bitsPerElement);
+
+  // calculate the number of hashes needed
+  *numHashesPtr = (int)ceil(bitsPerElement * 0.693147180559945); // ln(2)
+  return 0;
+}
+
+/*****************************************************************************
  * bfInit will initiate a bloom filter.
  * 
  * arguments:
@@ -92,23 +141,10 @@ unsigned int getHashVal(const void *buffer, int len, int iterator, int modulo)
  *      an initiated bloom filter
  * 
  * note:
- *      the user must free the returned bloom filter
- *      capacity must be > 1000
- * 
- * calculation:
- * 
- *      * Optimal number of bits is:
- *        numBits = (entries * ln(error)) / ln(2)^2
- * 
- *     * Optimal number of hash functions is:
- *        numHashes = bpe * ln(2)
+ *      the user must check and free the returned bloom filter
  */
 bloomfilter_t *bfInit(uint64_t estCapacity, double collisionProbability)
 {
-
-  // check the requested capacity and error is okay
-  assert(estCapacity > 1000);
-  assert(collisionProbability > 0.0);
 
   // assign some memory
   bloomfilter_t *bf;
@@ -118,20 +154,43 @@ bloomfilter_t *bfInit(uint64_t estCapacity, double collisionProbability)
   }
   bf->estCapacity = estCapacity;
   bf->collisionProbability = collisionProbability;
+  if (bfCalc(estCapacity, collisionProbability, &bf->numBits, &bf->numHashes) != 0)
+  {
+    free(bf);
+    return NULL;
+  }
+  bf->bitvector = bvInit(bf->numBits);
+  return bf;
+}
 
-  // calculate the required number of bits per element
-  // see: http://en.wikipedia.org/wiki/Bloom_filter
-  double num = log(collisionProbability);
-  double denom = 0.480453013918201; // ln(2)^2
-  double bitsPerElement = -(num / denom);
+/*****************************************************************************
+ * bfInitWithSize will initiate a bloom filter with defined number of bits
+ * and hash functions.
+ * 
+ * arguments:
+ *      numBits                   - size of the bit vector
+ *      numHash                   - number of hashes to use
+ * 
+ * returns:
+ *      an initiated bloom filter
+ * 
+ * note:
+ *      the user must check and free the returned bloom filter
+ */
+bloomfilter_t *bfInitWithSize(uint64_t numBits, uint64_t numHashes)
+{
 
-  // create the bit vector
-  uint64_t numBits = (uint64_t)((double)estCapacity * bitsPerElement);
+  // assign some memory
+  bloomfilter_t *bf;
+  if ((bf = malloc(sizeof *bf)) == NULL)
+  {
+    return NULL;
+  }
+  bf->estCapacity = 0;
+  bf->collisionProbability = 0;
+  bf->numBits = numBits;
+  bf->numHashes = numHashes;
   bf->bitvector = bvInit(numBits);
-
-  // calculate the number of hashes needed
-  bf->numHashes = (int)ceil(bitsPerElement * 0.693147180559945); // ln(2)
-
   return bf;
 }
 

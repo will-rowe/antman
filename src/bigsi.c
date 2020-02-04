@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "3rd-party/frozen.h"
 
@@ -41,9 +42,9 @@ bigsi_t *bigsInit(int numBits, int numHashes, const char *dbDir)
         newBIGSI->dbDirectory = dbDir;
         newBIGSI->bitvectors_dbp = NULL;
         newBIGSI->colours_dbp = NULL;
-        newBIGSI->metadata_name = NULL;
-        newBIGSI->bitvectors_db_name = NULL;
-        newBIGSI->colours_db_name = NULL;
+        newBIGSI->metadata_file = NULL;
+        newBIGSI->bitvectors_db = NULL;
+        newBIGSI->colours_db = NULL;
     }
     return newBIGSI;
 }
@@ -71,12 +72,12 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
     {
         if ((bigsi->colourArray = malloc(numEntries * sizeof(char **))) == NULL)
         {
-            fprintf(stderr, "could not allocate colour array\n");
+            fprintf(stderr, "error: could not allocate colour array\n");
             return -1;
         }
         if ((bigsi->tmpBitVectors = malloc(numEntries * sizeof(bitvector_t **))) == NULL)
         {
-            fprintf(stderr, "could not allocate bit vector array\n");
+            fprintf(stderr, "error: could not allocate bit vector array\n");
             return -1;
         }
     }
@@ -91,7 +92,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
         }
         else
         {
-            fprintf(stderr, "could not re-allocate colour array\n");
+            fprintf(stderr, "error: could not re-allocate colour array\n");
             return -1;
         }
         bitvector_t **tmp2 = realloc(bigsi->tmpBitVectors, (bigsi->colourIterator + numEntries) * sizeof(bitvector_t **));
@@ -101,7 +102,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
         }
         else
         {
-            fprintf(stderr, "could not re-allocate bit vector array\n");
+            fprintf(stderr, "error: could not re-allocate bit vector array\n");
             return -1;
         }
     }
@@ -116,20 +117,20 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
         // if the seqID is already in BIGSI, return error
         if (map_get(&bigsi->idChecker, seqID) != NULL)
         {
-            fprintf(stderr, "duplicate sequence ID can't be added to BIGSI: %s\n", seqID);
+            fprintf(stderr, "error: duplicate sequence ID can't be added to BIGSI (%s)\n", seqID);
             return -1;
         }
 
         // check the bloom filter is compatible and not empty
         bloomfilter_t *newBF = map_get(&id2bf, seqID);
-        if ((newBF->numHashes != bigsi->numHashes) || (newBF->bitvector->capacity != bigsi->numBits))
-        {
-            fprintf(stderr, "bloom filter incompatible with BIGSI for sequence: %s\n", seqID);
-            return -1;
-        }
         if (bvCount(newBF->bitvector) == 0)
         {
-            fprintf(stderr, "empty bloom filter supplied to BIGSI for sequence: %s\n", seqID);
+            fprintf(stderr, "error: empty bloom filter supplied to BIGSI for %s\n", seqID);
+            return -1;
+        }
+        if ((newBF->numHashes != bigsi->numHashes) || (newBF->bitvector->capacity != bigsi->numBits))
+        {
+            fprintf(stderr, "error: bloom filter incompatible with BIGSI for %s\n", seqID);
             return -1;
         }
 
@@ -142,7 +143,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
         // ADD 3 - store the colour to sequence ID lookup for this bit vector
         if ((bigsi->colourArray[bigsi->colourIterator] = malloc(strlen(seqID) + 1)) == NULL)
         {
-            fprintf(stderr, "could not allocate colour memory for sequence: %s\n", seqID);
+            fprintf(stderr, "error: could not allocate colour memory for %s\n", seqID);
             return -1;
         }
         strcpy(bigsi->colourArray[bigsi->colourIterator], seqID);
@@ -151,7 +152,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
         bigsi->colourIterator++;
         if (bigsi->colourIterator == MAX_COLOURS)
         {
-            fprintf(stderr, "maximum number of colours reached\n");
+            fprintf(stderr, "error: maximum number of colours reached\n");
             return -1;
         }
 
@@ -162,7 +163,7 @@ int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries)
     // check the number of input bloom filters matched the number expected by the user, otherwise we'll have memory issues
     if (inputMapCheck != numEntries)
     {
-        fprintf(stderr, "number bloom filters read did not match expected number: %u vs %u\n", inputMapCheck, numEntries);
+        fprintf(stderr, "error: number bloom filters read did not match expected number (%u vs %u)\n", inputMapCheck, numEntries);
         return -1;
     }
     return 0;
@@ -184,14 +185,14 @@ int bigsIndex(bigsi_t *bigsi)
     // check there are some bit vectors inserted into the data structure
     if (bigsi->colourIterator < 1)
     {
-        fprintf(stderr, "no bit vectors have been inserted into the BIGSI, nothing to index\n");
+        fprintf(stderr, "error: no bit vectors have been inserted into the BIGSI, nothing to index\n");
         return -1;
     }
 
     // check it hasn't already been indexed
     if (bigsi->indexed)
     {
-        fprintf(stderr, "indexing has already been run on this BIGSI\n");
+        fprintf(stderr, "error: indexing has already been run on this BIGSI\n");
         return -1;
     }
 
@@ -208,7 +209,7 @@ int bigsIndex(bigsi_t *bigsi)
     ret = initDBs(bigsi, PROG_NAME, stderr, openFlags);
     if (ret)
     {
-        fprintf(stderr, "could not create the Berkeley DBs (%u)\n", ret);
+        fprintf(stderr, "error: could not create the Berkeley DBs (%u)\n", ret);
         return -1;
     }
 
@@ -222,7 +223,7 @@ int bigsIndex(bigsi_t *bigsi)
         newBV = bvInit(bigsi->colourIterator);
         if (newBV == NULL)
         {
-            fprintf(stderr, "could not assign memory for new bit vector during BIGSI indexing\n");
+            fprintf(stderr, "error: could not assign memory for new bit vector during BIGSI indexing\n");
             return -1;
         }
 
@@ -233,7 +234,7 @@ int bigsIndex(bigsi_t *bigsi)
             // check the bit vector
             if (bigsi->tmpBitVectors[colour] == NULL)
             {
-                fprintf(stderr, "lost bit vector from BIGSI\n");
+                fprintf(stderr, "error: lost bit vector from BIGSI\n");
                 return -1;
             }
 
@@ -241,7 +242,7 @@ int bigsIndex(bigsi_t *bigsi)
             uint8_t bit = 0;
             if (bvGet(bigsi->tmpBitVectors[colour], i, &bit) != 0)
             {
-                fprintf(stderr, "could not access bit at index position %u in bit vector for colour: %u\n", i, colour);
+                fprintf(stderr, "error: could not access bit at index position %u in bit vector (colour %u)\n", i, colour);
                 return -1;
             }
             if (bit == 0)
@@ -252,19 +253,19 @@ int bigsIndex(bigsi_t *bigsi)
             bit = 0;
             if (bvGet(newBV, colour, &bit) != 0)
             {
-                fprintf(stderr, "could not access bit at index position %u in bigsi index bit vector %u\n", colour, i);
+                fprintf(stderr, "error: could not access bit at index position %u in bigsi index bit vector %u\n", colour, i);
                 return -1;
             }
             if (bit == 1)
             {
-                fprintf(stderr, "trying to set same bit twice in BIGSI bitvector %u for colour %u\n", i, colour);
+                fprintf(stderr, "error: trying to set same bit twice in BIGSI bitvector %u for colour %u\n", i, colour);
                 return -1;
             }
 
             // update the BIGSI index with this colour
             if (bvSet(newBV, colour, 1) != 0)
             {
-                fprintf(stderr, "could not set bit\n");
+                fprintf(stderr, "error: could not set bit\n");
                 return -1;
             }
         }
@@ -284,14 +285,14 @@ int bigsIndex(bigsi_t *bigsi)
         // add it
         if (bigsi->bitvectors_dbp->put(bigsi->bitvectors_dbp, NULL, &key, &data, keyFlags))
         {
-            fprintf(stderr, "could not add bit vector to database: %u\n", *(int *)key.data);
+            fprintf(stderr, "error: could not add bit vector to database (%u)\n", *(int *)key.data);
             return -1;
         }
 
         // free the original
         if (bvDestroy(newBV))
         {
-            fprintf(stderr, "could not destroy temporary bit vector number %u\n", i);
+            fprintf(stderr, "error: could not destroy temporary bit vector number %u\n", i);
             return -1;
         }
     }
@@ -307,7 +308,7 @@ int bigsIndex(bigsi_t *bigsi)
         data.size = (u_int32_t)strlen(bigsi->colourArray[colour]) + 1;
         if (bigsi->colours_dbp->put(bigsi->colours_dbp, NULL, &key, &data, keyFlags))
         {
-            fprintf(stderr, "could not add colour to database: %u -> %s\n", *(int *)key.data, (char *)data.data);
+            fprintf(stderr, "error: could not add colour to database (%u -> %s)\n", *(int *)key.data, (char *)data.data);
             return -1;
         }
 
@@ -343,31 +344,31 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
     // check the BIGSI is ready for querying
     if (!bigsi->indexed)
     {
-        fprintf(stderr, "need to run the bigsIndex function first\n");
+        fprintf(stderr, "error: need to run the bigsIndex function first\n");
         return -1;
     }
 
     // check a k-mer has been provided
     if (!buffer)
     {
-        fprintf(stderr, "no k-mer provided\n");
+        fprintf(stderr, "error: no k-mer provided\n");
         return -1;
     }
 
     // check we can send the result
     if (!result)
     {
-        fprintf(stderr, "no pointer provided for returning query results\n");
+        fprintf(stderr, "error: no pointer provided for returning query results\n");
         return -1;
     }
     if (result->capacity != bigsi->colourIterator)
     {
-        fprintf(stderr, "result bit vector capacity does not match number of colours in BIGSI\n");
+        fprintf(stderr, "error: result bit vector capacity does not match number of colours in BIGSI\n");
         return -1;
     }
     if (result->count != 0)
     {
-        fprintf(stderr, "result bit vector isn't empty\n");
+        fprintf(stderr, "error: result bit vector isn't empty\n");
         return -1;
     }
 
@@ -396,7 +397,7 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
         // query the DB for the corresponding bit vector in BIGSI for this hash value
         if ((ret = bigsi->bitvectors_dbp->get(bigsi->bitvectors_dbp, NULL, &key, &bv, keyFlags)) != 0)
         {
-            fprintf(stderr, "missing row in BIGSI for hash value: %d\n", hv);
+            fprintf(stderr, "error: missing row in BIGSI for hash value: %d\n", hv);
             return -1;
         }
 
@@ -412,7 +413,7 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
             // first BIGSI hit can be the basis of the result, so just OR
             if (bvBOR(result, (bitvector_t *)bv.data, result) != 0)
             {
-                fprintf(stderr, "could not bitwise OR during BIGSI query\n");
+                fprintf(stderr, "error: could not bitwise OR during BIGSI query\n");
                 return -1;
             }
         }
@@ -422,7 +423,7 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
             // bitwise AND the current result with the new BIGSI hit
             if (bvBANDupdate(result, (bitvector_t *)bv.data) != 0)
             {
-                fprintf(stderr, "could not bitwise AND during BIGSI query\n");
+                fprintf(stderr, "error: could not bitwise AND during BIGSI query\n");
                 return -1;
             }
 
@@ -456,21 +457,21 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
     // check the BIGSI is ready for querying
     if (!bigsi->indexed)
     {
-        fprintf(stderr, "need to run the bigsIndex function first\n");
+        fprintf(stderr, "error: need to run the bigsIndex function first\n");
         return -1;
     }
 
     // check query colour is in range
     if (colour > bigsi->colourIterator)
     {
-        fprintf(stderr, "colour not present in BIGSI: %u\n", colour);
+        fprintf(stderr, "error: colour not present in BIGSI: %u\n", colour);
         return -1;
     }
 
     // check we can send the result
     if (!result)
     {
-        fprintf(stderr, "no pointer provided for returning query results\n");
+        fprintf(stderr, "error: no pointer provided for returning query results\n");
         return -1;
     }
 
@@ -489,7 +490,7 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
     // query the DB for the corresponding sequence ID in BIGSI for this colour
     if ((ret = bigsi->colours_dbp->get(bigsi->colours_dbp, NULL, &key, &seqID, keyFlags)) != 0)
     {
-        fprintf(stderr, "can't find colour in BIGSI: %d\n", colour);
+        fprintf(stderr, "error: can't find colour in BIGSI (colour %d)\n", colour);
         return -1;
     }
 
@@ -497,7 +498,7 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
     *result = malloc((int)seqID.size);
     if (*result == NULL)
     {
-        fprintf(stderr, "could not allocate memory for sequence ID retrieval\n");
+        fprintf(stderr, "error: could not allocate memory for sequence ID retrieval\n");
         return -1;
     }
     strcpy(*result, ((char *)seqID.data));
@@ -512,18 +513,20 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
  * 
  * returns:
  *      0 on success, -1 on error
+ * 
+ * note:
+ *      if BIGSI is indexed, it will call the flush function instead
  */
 int bigsDestroy(bigsi_t *bigsi)
 {
     if (!bigsi)
     {
-        fprintf(stderr, "no BIGSI was provided to bigsDestroy\n");
+        fprintf(stderr, "error: no BIGSI was provided to bigsDestroy\n");
         return -1;
     }
     if (bigsi->indexed)
     {
-        fprintf(stderr, "use bigsFlush to close an indexed BIGSI properly\n");
-        return -1;
+        return bigsFlush(bigsi);
     }
 
     // if there has been a call to bigsAdd, there will be some freeing to do
@@ -559,33 +562,33 @@ int bigsFlush(bigsi_t *bigsi)
 {
     if (!bigsi->indexed)
     {
-        fprintf(stderr, "can't flush an un-indexed BIGSI\n");
+        fprintf(stderr, "error: can't flush an un-indexed BIGSI\n");
         return -1;
     }
-    int status = json_fprintf(bigsi->metadata_name, "{ db_directory: %Q, metadata: %Q, bitvectors: %Q, colours: %Q, numBits: %d, numHashes: %d, colourIterator: %d }",
+    int status = json_fprintf(bigsi->metadata_file, "{ db_directory: %Q, metadata: %Q, bitvectors: %Q, colours: %Q, numBits: %d, numHashes: %d, colourIterator: %d }",
                               bigsi->dbDirectory,
-                              bigsi->metadata_name,
-                              bigsi->bitvectors_db_name,
-                              bigsi->colours_db_name,
+                              bigsi->metadata_file,
+                              bigsi->bitvectors_db,
+                              bigsi->colours_db,
                               bigsi->numBits,
                               bigsi->numHashes,
                               bigsi->colourIterator);
     if (status < 0)
     {
-        fprintf(stderr, "failed to write bigsi metadata to disk (%d)\n", status);
+        fprintf(stderr, "error: failed to write bigsi metadata to disk (%d)\n", status);
         return -1;
     }
-    json_prettify_file(bigsi->metadata_name);
+    json_prettify_file(bigsi->metadata_file);
 
     // now the metadata is written, close down the dbs
     if (closeDBs(bigsi))
     {
-        fprintf(stderr, "could not close the BIGSI databases\n");
+        fprintf(stderr, "error: could not close the BIGSI databases\n");
         return -1;
     }
-    free(bigsi->colours_db_name);
-    free(bigsi->bitvectors_db_name);
-    free(bigsi->metadata_name);
+    free(bigsi->colours_db);
+    free(bigsi->bitvectors_db);
+    free(bigsi->metadata_file);
     free(bigsi);
     bigsi = NULL;
     return 0;
@@ -595,7 +598,7 @@ int bigsFlush(bigsi_t *bigsi)
  * bigsLoad will load an indexed BIGSI from disk.
  * 
  * arguments:
- *      dbDir                  - where to load the BIGSI files from
+ *      dbDir                  - what directory to load the BIGSI files from
  * 
  * returns:
  *      pointer to the loaded BIGSI
@@ -610,22 +613,29 @@ bigsi_t *bigsLoad(const char *dbDir)
     bigsi_t *bigsi = bigsInit(1, 1, dbDir);
     if (bigsi == NULL)
     {
-        fprintf(stderr, "could not allocate memory for BIGSI\n");
+        fprintf(stderr, "error: could not allocate memory for BIGSI\n");
         return NULL;
     }
 
     // setup the filenames
     setFilenames(bigsi);
 
+    // check files exist in the provided dir
+    if ((access(bigsi->metadata_file, R_OK | W_OK) == -1) || (access(bigsi->bitvectors_db, R_OK | W_OK) == -1) || (access(bigsi->colours_db, R_OK | W_OK) == -1))
+    {
+        fprintf(stderr, "error: could not access BIGSI database files in %s\n", bigsi->dbDirectory);
+        return NULL;
+    }
+
     // read the file into a buffer
-    char *content = json_fread(bigsi->metadata_name);
+    char *content = json_fread(bigsi->metadata_file);
 
     // scan the file content and populate the struct
     int status = json_scanf(content, strlen(content), "{ db_directory: %Q, metadata: %Q, bitvectors: %Q, colours: %Q, numBits: %d, numHashes: %d, colourIterator: %d }",
                             &bigsi->dbDirectory,
-                            &bigsi->metadata_name,
-                            &bigsi->bitvectors_db_name,
-                            &bigsi->colours_db_name,
+                            &bigsi->metadata_file,
+                            &bigsi->bitvectors_db,
+                            &bigsi->colours_db,
                             &bigsi->numBits,
                             &bigsi->numHashes,
                             &bigsi->colourIterator);
@@ -636,7 +646,7 @@ bigsi_t *bigsLoad(const char *dbDir)
     // check for error in json scan (-1 == error, 0 == no elements found, >0 == elements parsed)
     if (status < 1)
     {
-        fprintf(stderr, "could not scan metadata from json file\n");
+        fprintf(stderr, "error: could not scan metadata from json file\n");
         return NULL;
     }
 
@@ -647,32 +657,11 @@ bigsi_t *bigsLoad(const char *dbDir)
     openFlags = DB_RDONLY;
     if ((ret = initDBs(bigsi, PROG_NAME, stderr, openFlags)) != 0)
     {
-        fprintf(stderr, "could not open the Berkeley DBs (%u)\n", ret);
+        fprintf(stderr, "error: could not open the Berkeley DBs (%u)\n", ret);
         return NULL;
     }
     bigsi->indexed = true;
     return bigsi;
-}
-
-// setFilenames is a helper function to allocate and set the filenames for the index files
-void setFilenames(bigsi_t *bigsi)
-{
-    size_t size;
-
-    // set filename for the metadata
-    size = strlen(bigsi->dbDirectory) + strlen(BIGSI_METADATA_FILENAME) + 2;
-    bigsi->metadata_name = malloc(size);
-    snprintf(bigsi->metadata_name, size, "%s/%s", bigsi->dbDirectory, BIGSI_METADATA_FILENAME);
-
-    // set filename for the bitvectors database
-    size = strlen(bigsi->dbDirectory) + strlen(BITVECTORS_DB_FILENAME) + 2;
-    bigsi->bitvectors_db_name = malloc(size);
-    snprintf(bigsi->bitvectors_db_name, size, "%s/%s", bigsi->dbDirectory, BITVECTORS_DB_FILENAME);
-
-    // set filename for the colours database
-    size = strlen(bigsi->dbDirectory) + strlen(COLOURS_DB_FILENAME) + 2;
-    bigsi->colours_db_name = malloc(size);
-    snprintf(bigsi->colours_db_name, size, "%s/%s", bigsi->dbDirectory, COLOURS_DB_FILENAME);
 }
 
 // initDBs will initialise all the DBs in the BIGSI data structure
@@ -681,7 +670,7 @@ int initDBs(bigsi_t *bigsi, const char *program_name, FILE *error_file_pointer, 
     int ret;
 
     // open the colours database
-    ret = openDB(&(bigsi->colours_dbp), bigsi->colours_db_name, program_name, error_file_pointer, openFlags);
+    ret = openDB(&(bigsi->colours_dbp), bigsi->colours_db, program_name, error_file_pointer, openFlags);
 
     // error reporting is handled in openDB() so just return the return code here
     if (ret != 0)
@@ -690,7 +679,7 @@ int initDBs(bigsi_t *bigsi, const char *program_name, FILE *error_file_pointer, 
     }
 
     // open the bit vectors database
-    ret = openDB(&(bigsi->bitvectors_dbp), bigsi->bitvectors_db_name, program_name, error_file_pointer, openFlags);
+    ret = openDB(&(bigsi->bitvectors_dbp), bigsi->bitvectors_db, program_name, error_file_pointer, openFlags);
 
     // error reporting is handled in openDB() so just return the return code here
     if (ret != 0)
@@ -711,7 +700,7 @@ int closeDBs(bigsi_t *bigsi)
         ret = bigsi->colours_dbp->close(bigsi->colours_dbp, 0);
         if (ret != 0)
         {
-            fprintf(stderr, "colour database close failed: %s\n", db_strerror(ret));
+            fprintf(stderr, "error: colour database close failed (%s)\n", db_strerror(ret));
         }
     }
     if (bigsi->bitvectors_dbp != NULL)
@@ -719,7 +708,7 @@ int closeDBs(bigsi_t *bigsi)
         ret = bigsi->bitvectors_dbp->close(bigsi->bitvectors_dbp, 0);
         if (ret != 0)
         {
-            fprintf(stderr, "bitvector database close failed: %s\n", db_strerror(ret));
+            fprintf(stderr, "error: bitvector database close failed (%s)\n", db_strerror(ret));
         }
     }
     return 0;
@@ -764,4 +753,25 @@ int openDB(DB **dbpp,                /* The DB handle that we are opening */
         return (ret);
     }
     return 0;
+}
+
+// setFilenames is a helper function to allocate and set the filenames for the index files
+void setFilenames(bigsi_t *bigsi)
+{
+    size_t size;
+
+    // set filename for the metadata
+    size = strlen(bigsi->dbDirectory) + strlen(BIGSI_METADATA_FILENAME) + 2;
+    bigsi->metadata_file = malloc(size);
+    snprintf(bigsi->metadata_file, size, "%s/%s", bigsi->dbDirectory, BIGSI_METADATA_FILENAME);
+
+    // set filename for the bitvectors database
+    size = strlen(bigsi->dbDirectory) + strlen(BITVECTORS_DB_FILENAME) + 2;
+    bigsi->bitvectors_db = malloc(size);
+    snprintf(bigsi->bitvectors_db, size, "%s/%s", bigsi->dbDirectory, BITVECTORS_DB_FILENAME);
+
+    // set filename for the colours database
+    size = strlen(bigsi->dbDirectory) + strlen(COLOURS_DB_FILENAME) + 2;
+    bigsi->colours_db = malloc(size);
+    snprintf(bigsi->colours_db, size, "%s/%s", bigsi->dbDirectory, COLOURS_DB_FILENAME);
 }

@@ -19,7 +19,11 @@
  * input bloom filters will be deleted to save space.
  * 
  * 
- * Currently, this BIGSI implementation is not thread safe.
+ * Limitations:
+ *      
+ *          Currently, this BIGSI implementation is not thread safe.
+ *          Filenames are hardcoded (directory can be provided though)
+ * 
  */
 #ifndef BIGSI_H
 #define BIGSI_H
@@ -61,12 +65,12 @@ typedef struct bigsi
     map_int_t idChecker;         // map of sequence ID to colour to check if an ID has been seen before
 
     // post-indexing fields:
-    DB *bitvectors_dbp;       // database containing the bit vectors
-    DB *colours_dbp;          // database containing the sequence ids
-    const char *dbDirectory;  // directory containing the database files
-    char *metadata_name;      // filename for metadata
-    char *bitvectors_db_name; // filename of the inventory database
-    char *colours_db_name;    // filename of the colours database
+    DB *bitvectors_dbp;      // database containing the bit vectors
+    DB *colours_dbp;         // database containing the sequence ids
+    const char *dbDirectory; // directory containing the database files
+    char *metadata_file;     // filename for metadata
+    char *bitvectors_db;     // filename of the inventory database
+    char *colours_db;        // filename of the colours database
 
 } bigsi_t;
 

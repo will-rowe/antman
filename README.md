@@ -24,9 +24,22 @@ Currently, the daemon will:
 ## Quickstart
 
 ```bash
-antman -setWatchDir /path/to/some/dir
-antman -start
-antman -stop
+antman -w /path/to/some/dir
+antman start
+antman stop
 ```
 
 > ANTMAN is being actively worked on and more documentation is being added
+
+
+NOTES:
+
+* can only set k-mer, bloom setting etc. during sketch command
+  * otherwise can get misamtches between dbs
+
+TODO:
+
+* a lot
+  * priorities:
+    * sort out bloom filter logic (there is two lots of hashing happening in different places)
+    * set up an efficient way to translate bigsi k-mer queries

@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "heap.h"
 #include "3rd-party/slog.h"
+
+#include "heap.h"
 
 // node is the building block for the heap
 struct node

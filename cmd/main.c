@@ -1,508 +1,592 @@
-#include <dirent.h>
-#include <errno.h>
-#include <signal.h>
+/*****************************************************************************
+ * main.c is used to select subcommand and parse command line arguments
+ * 
+ * From main, we can launch the subcommands:
+ *      - sketch
+ * 
+ */
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "../src/3rd-party/ketopt.h"
-#include "../src/bloomfilter.h"
-#include "../src/config.h"
-#include "../src/daemonize.h"
-#include "../src/sequence.h"
 #include "../src/3rd-party/slog.h"
-#include "../src/watcher.h"
 
-/*
-   greet prints the program name and version
-*/
-void greet()
-{
-    printf("=======================================================\n");
-    printf("%s (version: %s)\n", PROG_NAME, PROG_VERSION);
-    printf("=======================================================\n");
-}
+#include "subcommands.h"
+#include "../src/config.h"
+#include "../src/helpers.h"
+#include "../src/daemonize.h"
 
-/*
-   printUsage prints the usage info for antman
-*/
-void printUsage(void)
+/*****************************************************************************
+ * printMainHelp displays the main program help.
+ */
+void printMainHelp(void)
 {
-    printf("usage:\t%s [flags]\n\n"
-           "flags:\n"
-           "\t --setWatchDir=<path>                 \t set the watch directory (default: %s)\n"
-           "\t --setWhiteList=<path/filename>      \t set the white list\n"
-           "\t --setLog=<path/filename>            \t set the log file\n"
-           "\t --start                              \t start the daemon\n"
-           "\t --stop                               \t stop the daemon\n"
-           "\t --getPID                             \t prints PID of the daemon and exits\n"
+    printf("\n"
+           "===> %s | version %s <===\n\n"
+           "Tag line to go here....\n\n"
+           "Usage:\n"
+           "\t%s sketch -h                               \t sketch a reference database\n"
+           "\t%s set -h                                  \t update daemon settings\n"
+           "\t%s info -h                                 \t print daemon information\n"
+           "\t%s shrink -h                               \t launches the daemon\n"
+           "\t%s stop -h                                 \t stops the daemon\n"
            "\n"
-           "\t -h                                   \t prints this help and exits\n"
-           "\t -v                                   \t prints version number and exits\n",
-           PROG_NAME,
-           DEFAULT_WATCH_DIR);
+           "Options:\n"
+           "\t -h                                        \t prints this help and exits\n"
+           "\t -v                                        \t prints version number and exits\n",
+           PROG_NAME, PROG_VERSION, PROG_NAME, PROG_NAME, PROG_NAME, PROG_NAME, PROG_NAME);
 }
 
-/*
-    checkPID returns the PID of the running daemon
-    - checks if the antman daemon is running
-    - then checks if the PID is correct (-2 if the PID isn't found)
-    - returns the PID of the antman daemon (-1 if no daemon is running)
-
-    TODO: check if PID name is antman:
-        something like #ps -p $(./src/antman --getPID) -o comm=
-*/
-int checkPID(config_t *amConfig)
+/*****************************************************************************
+ * printsketchHelp displays the program help for the sketch subcommand.
+ */
+void printSketchHelp(void)
 {
-    if (amConfig->pid >= 0)
+    printf("\n"
+           "sketch a reference database\n\n"
+           "Usage:\n"
+           "\t%s sketch [options] <references.fasta>\n\n"
+           "Sketching options:\n"
+           "\t -k                                   \t k-mer size (default: %u)\n"
+           "\t -m                                   \t est. max. number of k-mers per bloom filter (default: %u)\n"
+           "\t -e                                   \t false positive error rate for bloom filters (default: %.4f)\n"
+           "\n"
+           "Database options:\n"
+           "\t -o                                   \t directory to write database files to (default: %s)\n"
+           "\n"
+           "Miscellaneous options:\n"
+           "\t -h                                   \t prints this help and exits\n",
+           PROG_NAME, AM_DEFAULT_K_SIZE, AM_DEFAULT_BLOOM_MAX_EL, AM_DEFAULT_BLOOM_FP_RATE, AM_DEFAULT_DB_DIR);
+}
+
+/*****************************************************************************
+ * printInfoHelp displays the program help for the info subcommand.
+ */
+void printInfoHelp(void)
+{
+    printf("\n"
+           "prints information from the daemon\n\n"
+           "Usage:\n"
+           "\t%s info [options]\n\n"
+           "Daemon options:\n"
+           "\t -p                                   \t print PID only\n"
+           "\n"
+           "Miscellaneous options:\n"
+           "\t -h                                   \t prints this help and exits\n",
+           PROG_NAME);
+}
+
+/*****************************************************************************
+ * printSetHelp displays the program help for the set subcommand.
+ */
+void printSetHelp(void)
+{
+    printf("\n"
+           "update daemon settings\n\n"
+           "Usage:\n"
+           "\t%s set [options]\n\n"
+           "Daemon options:\n"
+           "\t -l path/to/log.file                  \t set log file\n"
+           "\t -w path/to/dir                       \t set watch directory\n"
+           "\n"
+           "Miscellaneous options:\n"
+           "\t -h                                   \t prints this help and exits\n",
+           PROG_NAME);
+}
+
+/*****************************************************************************
+ * printShrinkHelp displays the program help for the shrink subcommand.
+ */
+void printShrinkHelp(void)
+{
+    printf("\n"
+           "launch the daemon\n\n"
+           "Usage:\n"
+           "\t%s shrink [options]\n\n"
+           "Daemon options:\n"
+           "\n"
+           "Miscellaneous options:\n"
+           "\t -h                                   \t prints this help and exits\n",
+           PROG_NAME);
+}
+
+/*****************************************************************************
+ * printStopHelp displays the program help for the stop subcommand.
+ */
+void printStopHelp(void)
+{
+    printf("\n"
+           "stop the daemon\n\n"
+           "Usage:\n"
+           "\t%s stop [options]\n\n"
+           "Daemon options:\n"
+           "\n"
+           "Miscellaneous options:\n"
+           "\t -h                                   \t prints this help and exits\n",
+           PROG_NAME);
+}
+
+/*****************************************************************************
+ * configLoader is helper function to load the config.
+ * 
+ * returns:
+ *      a loaded config
+ * 
+ * note:
+ *      a config will be created if it does not exist
+ *      the user must check and free the returned config
+ */
+config_t *configLoader(void)
+{
+    // init an empty config struct
+    config_t *config = initConfig();
+    if (config == NULL)
     {
-        if (kill(amConfig->pid, 0) != 0)
-        {
-            slog(0, SLOG_ERROR, "the registered antman pid is not running");
-            slog(0, SLOG_LIVE, "\t- registered PID: %d", amConfig->pid);
-            slog(0, SLOG_INFO, "updating config file...");
-            amConfig->pid = -1;
-            if (writeConfig(amConfig, amConfig->filename) != 0)
-            {
-                slog(0, SLOG_ERROR, "could not update the config file");
-                return 1;
-            }
-            return (-2);
-        }
-        return amConfig->pid;
+        fprintf(stderr, "error: failed to init a config\n\n");
+        return NULL;
     }
-    else
+
+    // check if a config file exists and is accessible
+    if (access(CONFIG_LOCATION, R_OK | W_OK) == -1)
+    {
+        // touch the config filepath
+        if (checkFilePath(CONFIG_LOCATION) != 0)
+        {
+            fprintf(stderr, "error: could not touch config file (%s)\n\n", CONFIG_LOCATION);
+        }
+
+        // write a new config
+        if (writeConfig(config, CONFIG_LOCATION) != 0)
+        {
+            destroyConfig(config);
+            fprintf(stderr, "\nerror: failed to create a config file at %s\n\n", CONFIG_LOCATION);
+            return NULL;
+        }
+    }
+
+    // load the config file into the struct
+    if (loadConfig(config, CONFIG_LOCATION) != 0)
+    {
+        destroyConfig(config);
+        fprintf(stderr, "\nerror: failed to the load config file\n\n");
+        return NULL;
+    }
+    return config;
+}
+
+/*****************************************************************************
+ * greet is helper function to check the settings and greet the user.
+ * 
+ * arguments:
+ *      config                     - a loaded config
+ *      checkDB                    - flag to check the reference database
+ *      cmd                        - the subcommand being run
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ */
+int greet(config_t *config, bool checkDB, char *cmd)
+{
+    // check the config
+    if (checkConfig(config, checkDB) != 0)
     {
         return -1;
     }
-}
 
-/*
-    stopAntman stops the daemon
-    - issues SIGTERM to antman daemon
-    - updates the config
+    // banner
+    printf("=======================================================\n");
+    printf("%s (version: %s)\n", PROG_NAME, PROG_VERSION);
+    printf("=======================================================\n");
 
-    TODO: instead of using SIGTERM, use waitpid and then decide to use a SIGKILL before harvesting zombies
-*/
-int stopAntman(config_t *amConfig)
-{
-    if (kill(amConfig->pid, SIGTERM) != 0)
-    {
-        slog(0, SLOG_ERROR, "could not kill the daemon process");
-        slog(0, SLOG_LIVE, "\t- registered PID: %d", amConfig->pid);
-        return 1;
-    }
-    amConfig->pid = -1;
-    if (writeConfig(amConfig, amConfig->filename) != 0)
-    {
-        slog(0, SLOG_ERROR, "could not update the config file after stopping the daemon");
-        return 1;
-    }
+    // start the log
+    slog_init(config->currentLogFile, NULL, 1, 0);
+    slog(0, SLOG_LIVE, "reading config...");
+    slog(0, SLOG_INFO, "\t- config location: %s", CONFIG_LOCATION);
+    slog(0, SLOG_INFO, "\t- config created on: %s", config->created);
+    slog(0, SLOG_INFO, "\t- config last modified on: %s", config->modified);
+    slog(0, SLOG_INFO, "\t- current log file: %s", config->currentLogFile);
+    slog(0, SLOG_INFO, "\t- watch directory: %s", config->watchDir);
+    slog(0, SLOG_INFO, "\t- white list: %s", config->white_list);
+    slog(0, SLOG_INFO, "\t- k-mer size: %d", config->kSize);
+    slog(0, SLOG_INFO, "\t- max number of k-mers per bloom filter: %d", config->maxElements);
+    slog(0, SLOG_INFO, "\t- bloom filter false positive rate: %f", config->fpRate);
+    slog(0, SLOG_LIVE, "starting %s subcommand...", cmd);
     return 0;
 }
 
-/*
-    setWatchDir sets the watch directory
-    - checks the directory exists
-    - checks the directory is accessible
-*/
-int setWatchDir(config_t *amConfig, char *dirName)
-{
-    DIR *dir = opendir(dirName);
-    if (dir)
-    {
-        closedir(dir);
-        amConfig->watch_directory = dirName;
-        return 0;
-    }
-    else if (ENOENT == errno)
-    {
-        slog(0, SLOG_ERROR, "specified directory does not exist: %s", dirName);
-        return 1;
-    }
-    else
-    {
-        slog(0, SLOG_ERROR, "can't access the specified directory: %s", dirName);
-        return 1;
-    }
-}
-
-/*
-    setWhiteList sets the white list
-    - checks the file exists
-    - TODO: checks it is a multifasta
-*/
-int setWhiteList(config_t *amConfig, char *fileName)
-{
-    if (access(fileName, F_OK) == -1)
-    {
-        slog(0, SLOG_ERROR, "can't access white list file: %s", fileName);
-        return 1;
-    }
-    amConfig->white_list = fileName;
-    return 0;
-}
-
-/*
-    main is the antman entry point
-*/
+/*****************************************************************************
+ * main is the entry point.
+ */
 int main(int argc, char *argv[])
 {
+    ketopt_t om = KETOPT_INIT, os = KETOPT_INIT;
+    int i, c;
+    config_t *config;
 
-    // set up the long flags
-    static ko_longopt_t longopts[] = {
-        {"start", ko_no_argument, 301},
-        {"stop", ko_no_argument, 302},
-        {"setWatchDir", ko_optional_argument, 303},
-        {"setWhiteList", ko_optional_argument, 304},
-        {"setLog", ko_optional_argument, 305},
-        {"getPID", ko_no_argument, 306},
-        {0, 0, 0}};
-
-    // set up the job list
-    int start = 0, stop = 0, getPID = 0;
-    char *watchDir = NULL;
-    char *whiteList = NULL;
-    char *logFile = NULL;
-
-    // get a default log name
-    time_t timer;
-    time(&timer);
-    struct tm *tm_info;
-    tm_info = localtime(&timer);
-    static char defaultLog[28];
-    strftime(defaultLog, 28, "./antman-%Y-%m-%d-%H%M.log", tm_info);
-
-    // get the CLI info
-    ketopt_t opt = KETOPT_INIT;
-    int c;
-    while ((c = ketopt(&opt, argc, argv, 1, "hvu:", longopts)) >= 0)
+    // check for help and version requests, anything else will be ignored if there is no subcommand
+    while ((c = ketopt(&om, argc, argv, 0, "hv", 0)) >= 0)
     {
+
+        // prints help and exits
         if (c == 'h')
         {
-            printUsage();
+            printMainHelp();
             return 0;
         }
-        else if (c == 'v')
+
+        // prints version and exits
+        if (c == 'v')
         {
             printf("%s\n", PROG_VERSION);
             return 0;
         }
-        else if (c == 301)
-            start = 1;
-        else if (c == 302)
-            stop = 1;
-        else if (c == 303)
-            opt.arg ? (watchDir = opt.arg) : (watchDir = DEFAULT_WATCH_DIR);
-        else if (c == 304)
+    }
+
+    // check a subcommand was provided
+    if (om.ind == argc)
+    {
+        fprintf(stderr, "error: no subcommand provided\n\n");
+        printMainHelp();
+        return -1;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - info - */
+    if (strcmp(argv[om.ind], "info") == 0)
+    {
+        bool pidOnly = false;
+
+        // check the arguments for info
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "hp", 0)) >= 0)
         {
-            if (opt.arg != NULL)
+            if (c == 'h')
             {
-                whiteList = opt.arg;
+                printInfoHelp();
+                return 0;
+            }
+            if (c == 'p')
+            {
+                pidOnly = true;
             }
         }
-        else if (c == 305)
-            opt.arg ? (logFile = opt.arg) : (logFile = defaultLog);
-        else if (c == 306)
-            getPID = 1;
-        else if (c == 'u')
-            printf("unused flag:  -u %s\n", opt.arg);
-        else if (c == '?')
+
+        // load the config and run the info function
+        if ((config = configLoader()) == NULL)
+            return -1;
+        int retVal = info(config, pidOnly);
+        destroyConfig(config);
+        return retVal;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - set - */
+    if (strcmp(argv[om.ind], "set") == 0)
+    {
+
+        // load the config
+        if ((config = configLoader()) == NULL)
+            return -1;
+
+        // TODO: for now, only run sketch when the daemon is not already running - do we want to handle this differently?
+        if (checkPID(config) >= 0)
         {
-            fprintf(stderr, "unknown flag: -%c\n\n", opt.opt ? opt.opt : ':');
-            printUsage();
-            return 1;
+            fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
+            destroyConfig(config);
+            return -1;
         }
-        else if (c == ':')
+
+        // check the arguments for set and update the in-memory config
+        bool optErr = false, optCheck = false;
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "hw:l:", 0)) >= 0)
         {
-            fprintf(stderr, "missing arg with flag: -%c\n\n", opt.opt ? opt.opt : ':');
-            printUsage();
-            return 1;
+            optCheck = true;
+            if (c == 'h')
+            {
+                printSetHelp();
+                destroyConfig(config);
+                return 0;
+            }
+
+            // set log file
+            if (c == 'l')
+            {
+                if (setConfigField(config, 0, os.arg) != 0)
+                    optErr = true;
+            }
+
+            // set watch directory
+            if (c == 'w')
+            {
+                if (setConfigField(config, 1, os.arg) != 0)
+                    optErr = true;
+            }
+
+            // TODO: set white list
+            //
+            //
         }
-    }
 
-    // check we have a job to do, otherwise print the help screen and exit
-    if (start + stop + getPID == 0 && (watchDir == NULL) && (logFile == NULL) && (whiteList == NULL))
-    {
-        fprintf(stderr, "nothing to do: no flags set\n\n");
-        printUsage();
-        return 1;
-    }
-
-    // check the config exists and is accessible
-    if (access(CONFIG_LOCATION, F_OK) == -1)
-    {
-        // config doesn't exist, so create one
-        config_t *tmp = initConfig();
-        if (tmp == 0)
+        // check for any errors in the subcommand arguments
+        if (optErr)
         {
-            fprintf(stderr, "\nerror: failed to create a config file (out of memory)\n\n");
-            return 1;
+            destroyConfig(config);
+            return -1;
         }
-        if (writeConfig(tmp, CONFIG_LOCATION) != 0)
+        if (!optCheck)
         {
-            destroyConfig(tmp);
-            fprintf(stderr, "\nerror: failed to create a config file\n\n");
-            return 1;
+            fprintf(stderr, "error: no options passed to set, nothing to do\n\n");
+            printSetHelp();
+            destroyConfig(config);
+            return -1;
         }
-        destroyConfig(tmp);
-    }
-    if (access(CONFIG_LOCATION, W_OK) == -1)
-    {
-        fprintf(stderr, "\nerror: failed to write to config file (check permissions)\n\n");
-        return 1;
-    }
 
-    // load the config
-    config_t *amConfig = initConfig();
-    if (amConfig == 0)
-    {
-        fprintf(stderr, "\nerror: failed to load config file (out of memory)\n\n");
-        return 1;
-    }
-    if (loadConfig(amConfig, CONFIG_LOCATION) != 0)
-    {
-        destroyConfig(amConfig);
-        fprintf(stderr, "\nerror: failed to load config file\n\n");
-        return 1;
-    }
-
-    // get the PID of the running antman daemon (returns -1 if no daemon is running)
-    int daemonPID = checkPID(amConfig);
-    if (daemonPID == -2)
-    {
-        destroyConfig(amConfig);
-        return 1;
-    }
-
-    // handle any --getPID request (and then exit)
-    if (getPID == 1)
-    {
-        printf("%d\n", daemonPID);
-        destroyConfig(amConfig);
+        // write the in-memory config to disk
+        if (writeConfig(config, config->filename) != 0)
+        {
+            fprintf(stderr, "could not update the config file\n");
+            destroyConfig(config);
+            return -1;
+        }
+        destroyConfig(config);
         return 0;
     }
 
-    // we've got a real job now, better greet the user
-    greet();
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - sketch - */
+    if (strcmp(argv[om.ind], "sketch") == 0)
+    {
 
-    // start logging
-    if (amConfig->current_log_file == NULL)
-    {
-        slog_init(defaultLog, "log/slog.cfg", 4, 1);
-    }
-    else
-    {
-        slog_init(amConfig->current_log_file, "log/slog.cfg", 4, 1);
-    }
-    slog(0, SLOG_INFO, "reading config...");
-    slog(0, SLOG_LIVE, "\t- config: %s", CONFIG_LOCATION);
-    slog(0, SLOG_LIVE, "\t- created on: %s", amConfig->created);
-    slog(0, SLOG_LIVE, "\t- modified on: %s", amConfig->modified);
-    slog(0, SLOG_LIVE, "\t- watch directory: %s", amConfig->watch_directory);
-    slog(0, SLOG_LIVE, "\t- white list: %s", amConfig->white_list);
-    slog(0, SLOG_LIVE, "\t- current log file: %s", amConfig->current_log_file);
-    if (daemonPID != -1)
-    {
-        slog(0, SLOG_LIVE, "\t- daemon running: true");
-    }
-    else
-    {
-        slog(0, SLOG_LIVE, "\t- daemon running: false");
-    }
+        // load the config
+        if ((config = configLoader()) == NULL)
+            return -1;
 
-    // make sure there is a log file on record - create the default if needed (can be changed by the user later)
-    if (amConfig->current_log_file == NULL && logFile == NULL)
-    {
-        logFile = strdup(defaultLog);
-    }
-
-    // handle any --stop request
-    if (stop == 1)
-    {
-        slog(0, SLOG_INFO, "stopping daemon...");
-        if (daemonPID == -1)
+        // TODO: for now, only run sketch when the daemon is not already running - do we want to handle this differently?
+        if (checkPID(config) >= 0)
         {
-            slog(0, SLOG_ERROR, "no daemon running, nothing to stop");
-            destroyConfig(amConfig);
-            return 1;
+            fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
+            destroyConfig(config);
+            return -1;
         }
-        slog(0, SLOG_LIVE, "\t- PID %d", daemonPID);
-        if (stopAntman(amConfig) != 0)
-        {
-            destroyConfig(amConfig);
-            return 1;
-        }
-        slog(0, SLOG_LIVE, "\t- stopped the daemon");
-        slog(0, SLOG_LIVE, "\t- daemon log: %s", amConfig->current_log_file);
-    }
 
-    // handle any --setWatchDir, --setWhiteList or --setLog requests
-    if (watchDir != NULL || whiteList != NULL || logFile != NULL)
-    {
-
-        // if the daemon is already running, stop it first (if we didn't just stop it with --stop)
-        if (daemonPID >= 0 && stop == 0)
+        // check the arguments for sketch and update the in-memory config
+        bool optErr = false;
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "hk:m:e:o:", 0)) >= 0)
         {
-            slog(0, SLOG_INFO, "stopping daemon...");
-            if (stopAntman(amConfig) != 0)
+            if (c == 'h')
             {
-                destroyConfig(amConfig);
-                return 1;
+                printSketchHelp();
+                destroyConfig(config);
+                return 0;
+            }
+            if (c == 'k')
+            {
+                if (setConfigField(config, 3, os.arg) != 0)
+                    optErr = true;
+            }
+            if (c == 'm')
+            {
+                if (setConfigField(config, 4, os.arg) != 0)
+                    optErr = true;
+            }
+            if (c == 'e')
+            {
+                if (setConfigField(config, 5, os.arg) != 0)
+                    optErr = true;
+            }
+            if (c == 'o')
+            {
+                if (setConfigField(config, 6, os.arg) != 0)
+                    optErr = true;
             }
         }
 
-        // set the watch directory if requested
-        if (watchDir != NULL)
+        // make sure there is an output directory for the database
+        if (!config->dbDir)
         {
-            slog(0, SLOG_INFO, "setting watch directory...");
-            if (setWatchDir(amConfig, strdup(watchDir)) != 0)
+            if (setConfigField(config, 6, AM_DEFAULT_DB_DIR) != 0)
+                optErr = true;
+        }
+
+        // check for any errors in the subcommand arguments
+        if (optErr)
+        {
+            destroyConfig(config);
+            return -1;
+        }
+
+        // greet the user and check the config
+        if (greet(config, false, argv[om.ind]))
+        {
+            destroyConfig(config);
+            return -1;
+        }
+
+        // set up the requested database
+        // TODO: only BIGSI hardcoded for now
+        if (setupDB(config, 0))
+        {
+            destroyConfig(config);
+            return -1;
+        }
+        slog(0, SLOG_INFO, "\t- number of hashes per bloom filter: %llu", config->numHashes);
+        slog(0, SLOG_INFO, "\t- number of bits used per bloom filter: %llu", config->numBits);
+        slog(0, SLOG_INFO, "\t- writing BIGSI database at: %s", config->dbDir);
+
+        // run sketch with either the positional arguments or STDIN
+        slog(0, SLOG_LIVE, "collecting sequences...\n");
+        bool useSTDIN = true;
+        for (i = os.ind + om.ind; i < argc; ++i)
+        {
+            useSTDIN = false;
+            if (sketch(config, argv[i]))
             {
-                destroyConfig(amConfig);
-                return 1;
+                destroyConfig(config);
+                return -1;
             }
-            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->watch_directory);
         }
-
-        // set the whitelist if requested
-        if (whiteList != NULL)
+        if (useSTDIN)
         {
-            slog(0, SLOG_INFO, "setting white list...");
-            if (setWhiteList(amConfig, strdup(whiteList)) != 0)
+            if (sketch(config, NULL))
             {
-                destroyConfig(amConfig);
-                return 1;
+                destroyConfig(config);
+                return -1;
             }
-            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->white_list);
         }
 
-        // set the log if requested
-        if (logFile != NULL)
+        // finish up by writing the run info to the config
+        if (writeConfig(config, config->filename) != 0)
         {
-            slog(0, SLOG_INFO, "setting log file...");
-            amConfig->current_log_file = strdup(logFile);
-            slog(0, SLOG_LIVE, "\t- set to: %s", amConfig->current_log_file);
+            fprintf(stderr, "could not update the config file\n");
+            destroyConfig(config);
+            return -1;
         }
-
-        // update the config
-        if (writeConfig(amConfig, amConfig->filename) != 0)
-        {
-            slog(0, SLOG_ERROR, "could not update the config file");
-            destroyConfig(amConfig);
-            return 1;
-        }
-
-        // restart the daemon if we stopped it (only if --stop wasn't also requested)
-        if (daemonPID >= 0 && stop == 0)
-        {
-            slog(0, SLOG_INFO, "restarting the antman daemon now...");
-            start = 1;
-        }
+        slog(0, SLOG_LIVE, "finished");
+        destroyConfig(config);
+        return 0;
     }
 
-    // handle any --start request
-    if (start == 1)
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - shrink - */
+    if (strcmp(argv[om.ind], "shrink") == 0)
     {
-        slog(0, SLOG_INFO, "checking antman...");
 
-        // check the daemon is not already running
-        if (amConfig->pid != -1)
+        // check the arguments for shrink
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "h", 0)) >= 0)
         {
-            slog(0, SLOG_ERROR, "the daemon is already running");
-            slog(0, SLOG_LIVE, "\t- current PID: %d", amConfig->pid);
-            destroyConfig(amConfig);
-            return 1;
+            if (c == 'h')
+            {
+                printShrinkHelp();
+                return 0;
+            }
         }
 
-        // check there is a watch directory and white list stored in the config
-        if (amConfig->white_list == NULL)
+        // load the config
+        if ((config = configLoader()) == NULL)
+            return -1;
+
+        // check not already running
+        if (checkPID(config) >= 0)
         {
-            slog(0, SLOG_ERROR, "no white list found");
-            slog(0, SLOG_LIVE, "\t- try `antman --setWhiteList=file.fna`");
-            destroyConfig(amConfig);
-            return 1;
+            fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
+            destroyConfig(config);
+            return -1;
         }
-        if (amConfig->watch_directory == NULL)
+
+        // set up a default log if needed
+        if (config->currentLogFile == NULL)
         {
-            slog(0, SLOG_ERROR, "no watch directory set");
-            slog(0, SLOG_LIVE, "\t- try `antman --setWatchDir=some/dir`");
-            destroyConfig(amConfig);
-            return 1;
+            if (createLogFile(config) != 0)
+            {
+                destroyConfig(config);
+                return -1;
+            }
         }
-        slog(0, SLOG_LIVE, "\t- ready");
 
-        /*
-
-sort out logic here
-
-move the processRef code here
-set up the thread pool earlier
-
-bloom filter per ref
-add to map
-populate bigsi
-
-store bigsi
-
-at some point serialise so we don't have to build it each time
-
-*/
-
-        // load the white list into a bloom filter
-        slog(0, SLOG_INFO, "loading white list into bloom filter...");
-        bloomfilter_t *refBF = bfInit(amConfig->bloom_max_elements, amConfig->bloom_fp_rate);
-        if (refBF == NULL)
+        // greet the user and check the config
+        if (greet(config, true, argv[om.ind]))
         {
-            slog(0, SLOG_ERROR, "could not init bloom filter");
-            destroyConfig(amConfig);
-            return 1;
+            destroyConfig(config);
+            return -1;
         }
-        processRef(amConfig->white_list, refBF, amConfig->k_size, amConfig->sketch_size);
-        slog(0, SLOG_LIVE, "\t done");
-        amConfig->bloom_filter = refBF;
 
+        // load the database
+        if (loadDB(config, 0))
+        {
+            destroyConfig(config);
+            return -1;
+        }
+        slog(0, SLOG_INFO, "\t- reference database location: %s", config->dbDir);
+        slog(0, SLOG_INFO, "\t- number of hashes functions used in BIGSI: %llu", config->numHashes);
+        slog(0, SLOG_INFO, "\t- number of rows in BIGSI: %llu", config->numBits);
+        slog(0, SLOG_INFO, "\t- number of colours in BIGSI: %u", config->bigsi->colourIterator);
+
+        // run the shrink function
+        // TODO: I'm keeping all of this in the main function for now
+        // wargs seems unecessary when I have an in-memory config
         // set up the watch directory
         slog(0, SLOG_INFO, "setting up the directory watcher...");
         watcherArgs_t *wargs = malloc(sizeof(watcherArgs_t));
         if (wargs == NULL)
         {
             slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
-            bfDestroy(refBF);
-            destroyConfig(amConfig);
+            destroyConfig(config);
             return 1;
         }
-        wargs->bloomFilter = amConfig->bloom_filter;
-        wargs->k_size = amConfig->k_size;
-        wargs->sketch_size = amConfig->sketch_size;
-        wargs->fp_rate = amConfig->bloom_fp_rate;
+        wargs->kSize = config->kSize;
+        wargs->fp_rate = config->fpRate;
 
         // start the daemon
         slog(0, SLOG_INFO, "starting the daemon...");
-        if (startDaemon(amConfig, wargs) != 0)
+        if (startDaemon(config, wargs) != 0)
         {
             free(wargs);
-            bfDestroy(refBF);
-            destroyConfig(amConfig);
-            return 1;
+            destroyConfig(config);
+            return -1;
         }
 
         // daemon has been killed
+        // TODO: have shrink destroy the config when done?
         free(wargs);
-        bfDestroy(refBF);
+        destroyConfig(config);
+        return 0;
     }
 
-    // end of play - no more requests
-    destroyConfig(amConfig);
-    slog(0, SLOG_INFO, "that's all folks");
-    return 0;
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - stop - */
+    if (strcmp(argv[om.ind], "stop") == 0)
+    {
+
+        // check the arguments for stop
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "h", 0)) >= 0)
+        {
+            if (c == 'h')
+            {
+                printStopHelp();
+                return 0;
+            }
+        }
+
+        // load the config and run the stop function
+        if ((config = configLoader()) == NULL)
+            return -1;
+        if (checkPID(config) < 0)
+        {
+            fprintf(stderr, "error: can't stop a daemon that is not running\n\n");
+            return -1;
+        }
+        int retVal = stopDaemon(config);
+        destroyConfig(config);
+        return retVal;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // error if we haven't recognised the subcommand
+    else
+    {
+        fprintf(stderr, "error: unrecognised subcommand (%s)\n\n", argv[om.ind]);
+        printMainHelp();
+        return -1;
+    }
 }
-
-/*
-to do -
-if keeping bloom filter, add the free to the destroyConfig function
-
-sort out wargs - there is a lot of overlap with the config
-
-*/

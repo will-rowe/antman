@@ -6,6 +6,7 @@
 
 #include "3rd-party/slog.h"
 #include "3rd-party/kseq.h"
+
 #include "sketch.h"
 #include "sequence.h"
 #include "watcher.h"
@@ -73,7 +74,7 @@ void processFastq(void *args)
             slog(0, SLOG_ERROR, "could not allocate a sketch");
             exit(1);
         }
-        sketchSequence(seq->seq.s, l, wargs->k_size, wargs->sketch_size, NULL, sketch);
+        sketchSequence(seq->seq.s, l, wargs->kSize, wargs->sketch_size, NULL, sketch);
         slog(0, SLOG_LIVE, "\t- [sketcher]:\tsketched a %dbp sequence", l);
 
         // estimate read containment within the reference
@@ -83,7 +84,7 @@ void processFastq(void *args)
         for (i = 0; i < wargs->sketch_size; i++)
         {
             uint8_t result = 0;
-            if (bfQuery(wargs->bloomFilter, &*(sketch + i), wargs->k_size, &result) != 0)
+            if (bfQuery(wargs->bloomFilter, &*(sketch + i), wargs->kSize, &result) != 0)
             {
                 fprintf(stderr, "could not query bloom filter\n");
                 return;
@@ -98,8 +99,8 @@ void processFastq(void *args)
         intersections -= (int)floor(wargs->fp_rate * wargs->sketch_size);
         double containmentEstimate = ((double)intersections / wargs->sketch_size);
 
-        int refTotalKmers = REF_LENGTH - wargs->k_size + 1;
-        int queryTotalKmers = l - wargs->k_size + 1;
+        int refTotalKmers = REF_LENGTH - wargs->kSize + 1;
+        int queryTotalKmers = l - wargs->kSize + 1;
 
         //slog(0, SLOG_INFO, "%d\t%d\t%d\t%f", intersections, refTotalKmers, queryTotalKmers, containmentEstimate);
 

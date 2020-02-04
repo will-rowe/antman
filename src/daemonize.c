@@ -6,10 +6,11 @@
 #include <signal.h>   //contains signal(3)
 #include <sys/stat.h> // contains umask(3)
 
+#include "3rd-party/slog.h"
+
 #include "bloomfilter.h"
 #include "daemonize.h"
 #include "sequence.h"
-#include "3rd-party/slog.h"
 #include "workerpool.h"
 
 // TODO: set these values by the cli
@@ -51,7 +52,7 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
 {
 
     // try daemonising the program
-    slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->current_log_file);
+    slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->currentLogFile);
     int res;
     if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
     {
@@ -95,12 +96,12 @@ int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
     const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
 
     // add the path(s) for the watcher to watch
-    if (FSW_OK != fsw_add_path(handle, amConfig->watch_directory))
+    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir))
     {
-        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watch_directory);
+        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
         return 1;
     }
-    slog(0, SLOG_LIVE, "\t- added directory to the watch path: %s", amConfig->watch_directory);
+    slog(0, SLOG_LIVE, "\t- added directory to the watch path: %s", amConfig->watchDir);
 
     // launch the worker threads
     slog(0, SLOG_INFO, "creating workerpool...");

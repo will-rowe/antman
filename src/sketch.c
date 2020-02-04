@@ -6,10 +6,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include "3rd-party/slog.h"
+
 #include "bloomfilter.h"
 #include "hashmap.h"
 #include "heap.h"
-#include "3rd-party/slog.h"
 
 unsigned char seq_nt4_table[256] = {
 	0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -52,7 +53,7 @@ static inline uint64_t hash64(uint64_t key, uint64_t mask)
 		bf - pointer to a bloom filter
 		sketchPtr - pointer to a sketch (which has been initalised to == sketchSize)
 */
-void sketchSequence(const char *str, int len, int k, int sketchSize, bloomfilter_t *bf, uint64_t *sketchPtr)
+int sketchSequence(const char *str, int len, int k, int sketchSize, bloomfilter_t *bf, uint64_t *sketchPtr)
 {
 
 	// TODO: sketchSize must be < HASHMAP_SIZE,
@@ -111,45 +112,48 @@ void sketchSequence(const char *str, int len, int k, int sketchSize, bloomfilter
 			if (bfAdd(bf, &hashedKmer, k != 0))
 			{
 				fprintf(stderr, "could not add k-mer to bloom filter\n");
-				return;
+				return -1;
 			}
 		}
 
-		// now we have a hashed k-mer, first check if the sketch isn't at capacity yet
-		if (currentHeapSize < sketchSize)
+		if (sketchPtr != NULL)
 		{
+			// now we have a hashed k-mer, first check if the sketch isn't at capacity yet
+			if (currentHeapSize < sketchSize)
+			{
 
-			// check if the hashed k-mer is already in the sketch
+				// check if the hashed k-mer is already in the sketch
+				if (hmSearch(hashedKmer))
+					continue;
+
+				// add the hashed k-mer to the sketch and the tracker
+				if (currentHeapSize == 0)
+				{
+					kmvSketch = initHeap(hashedKmer); // special case for first minimum in sketch, which is needed to init the heap
+				}
+				else
+				{
+					push(&kmvSketch, hashedKmer);
+				}
+				assert(hmInsert(hashedKmer) == true);
+				currentHeapSize++;
+				continue;
+			}
+
+			// continue if the current max is smaller than the new hashed k-mer
+			if (peek(&kmvSketch) <= hashedKmer)
+				continue;
+
+			// continue if the hashed k-mer is already in the current sketch
 			if (hmSearch(hashedKmer))
 				continue;
 
-			// add the hashed k-mer to the sketch and the tracker
-			if (currentHeapSize == 0)
-			{
-				kmvSketch = initHeap(hashedKmer); // special case for first minimum in sketch, which is needed to init the heap
-			}
-			else
-			{
-				push(&kmvSketch, hashedKmer);
-			}
-			assert(hmInsert(hashedKmer) == true);
-			currentHeapSize++;
-			continue;
+			// otherwise, the final option is to pop the current max from the sketch and add in the new hashed k-mer
+			hmDelete(peek(&kmvSketch));
+			pop(&kmvSketch);
+			push(&kmvSketch, hashedKmer);
+			hmInsert(hashedKmer);
 		}
-
-		// continue if the current max is smaller than the new hashed k-mer
-		if (peek(&kmvSketch) <= hashedKmer)
-			continue;
-
-		// continue if the hashed k-mer is already in the current sketch
-		if (hmSearch(hashedKmer))
-			continue;
-
-		// otherwise, the final option is to pop the current max from the sketch and add in the new hashed k-mer
-		hmDelete(peek(&kmvSketch));
-		pop(&kmvSketch);
-		push(&kmvSketch, hashedKmer);
-		hmInsert(hashedKmer);
 	}
 
 	// the sequence has now been sketched, so collect the minimums from the heap
@@ -166,4 +170,6 @@ void sketchSequence(const char *str, int len, int k, int sketchSize, bloomfilter
 	// free the kmvSketch heap and the hashmap
 	destroy(&kmvSketch);
 	hmDestroy();
+
+	return 0;
 }

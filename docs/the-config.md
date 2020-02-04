@@ -9,13 +9,13 @@ The configuration file is in JSON format:
   "filename": "/tmp/.antman.config",
   "created": "2019-12-17:1420",
   "modified": "2019-12-17:1420",
-  "current_log_file": "./antman-2019-12-17-1420.log",
-  "watch_directory": "/var/lib/MinKNOW/data/reads",
+  "currentLogFile": "./antman-2019-12-17-1420.log",
+  "watchDir": "/var/lib/MinKNOW/data/reads",
   "pid": -1,
-  "k_size": 7,
+  "kSize": 7,
   "sketch_size": 128,
-  "bloom_fp_rate": 0.000000,
-  "bloom_max_elements": 100000
+  "fpRate": 0.000000,
+  "maxElements": 100000
 }
 ```
 
