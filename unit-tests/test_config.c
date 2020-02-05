@@ -14,7 +14,7 @@
 #define ERR_initConf3 "could not load conf from disk"
 #define ERR_initConf4 "loaded conf file does not match original conf"
 #define ERR_checkConf1 "check failed for existing conf file"
-#define ERR_checkConf2 "could not create new conf file during the checkConfig function"
+#define ERR_checkConf2 "could not create new conf file during the configCheck function"
 
 int tests_run = 0;
 
@@ -25,25 +25,25 @@ static char *test_initConf()
 {
 
   // create a config
-  config_t *tmp = initConfig();
+  config_t *tmp = configInit();
   tmp->pid = 666;
   if (tmp == 0)
     return ERR_initConf1;
 
   // write it to disk
-  if (writeConfig(tmp, TMP_CONFIG) != 0)
+  if (configWrite(tmp, TMP_CONFIG) != 0)
     return ERR_initConf2;
 
   // try loading from file
-  config_t *tmp2 = initConfig();
-  if (loadConfig(tmp2, TMP_CONFIG) != 0)
+  config_t *tmp2 = configInit();
+  if (configLoad(tmp2, TMP_CONFIG) != 0)
     return ERR_initConf3;
   if (tmp->pid != tmp2->pid)
     return ERR_initConf4;
 
   // clean up the test
-  destroyConfig(tmp);
-  destroyConfig(tmp2);
+  configDestroy(tmp);
+  configDestroy(tmp2);
   remove(TMP_CONFIG);
   return 0;
 }

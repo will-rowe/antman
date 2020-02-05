@@ -10,9 +10,9 @@
 #include "helpers.h"
 
 /*****************************************************************************
- * initConfig.
+ * configInit.
  */
-config_t *initConfig()
+config_t *configInit()
 {
     config_t *c;
     if ((c = malloc(sizeof *c)) != NULL)
@@ -31,14 +31,15 @@ config_t *initConfig()
         c->numBits = 0;
         c->numHashes = 0;
         c->bigsi = NULL;
+        c->numThreads = 1;
     }
     return c;
 }
 
 /*****************************************************************************
- * destroyConfig.
+ * configDestroy.
  */
-void destroyConfig(config_t *config)
+void configDestroy(config_t *config)
 {
     free(config->filename);
     free(config->created);
@@ -54,9 +55,9 @@ void destroyConfig(config_t *config)
 }
 
 /*****************************************************************************
- * writeConfig will write a json config from an initiated config_t struct.
+ * configWrite will write a json config from an initiated config_t struct.
  */
-int writeConfig(config_t *config, char *configFile)
+int configWrite(config_t *config, char *configFile)
 {
     if (config == NULL)
     {
@@ -109,9 +110,9 @@ int writeConfig(config_t *config, char *configFile)
 }
 
 /*****************************************************************************
- * loadConfig will read a json config into an initiated config_t struct.
+ * configLoad will read a json config into an initiated config_t struct.
  */
-int loadConfig(config_t *config, char *configFile)
+int configLoad(config_t *config, char *configFile)
 {
     if (config == NULL)
     {
@@ -149,7 +150,7 @@ int loadConfig(config_t *config, char *configFile)
 }
 
 /*****************************************************************************
- * checkConfig checks required fields.
+ * configCheck checks required fields.
  * 
  * arguments:
  *      config                  - the config to check
@@ -158,7 +159,7 @@ int loadConfig(config_t *config, char *configFile)
  * returns:
  *      0 on success, -1 on error
  */
-int checkConfig(config_t *config, bool testDB)
+int configCheck(config_t *config, bool testDB)
 {
     if (config == NULL)
     {
@@ -378,7 +379,7 @@ int createLogFile(config_t *config)
         return retVal;
 
     // write the updates
-    return writeConfig(config, config->filename);
+    return configWrite(config, config->filename);
 }
 
 /*****************************************************************************
@@ -427,7 +428,7 @@ int loadDB(config_t *config, int dbType)
         fprintf(stderr, "error: unrecognised database type for references\n");
         return -1;
     }
-    if (checkConfig(config, true))
+    if (configCheck(config, true))
         return -1;
 
     if ((config->bigsi = bigsLoad(config->dbDir)) == NULL)

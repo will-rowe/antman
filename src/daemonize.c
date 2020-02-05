@@ -8,32 +8,11 @@
 
 #include "3rd-party/slog.h"
 
-#include "bloomfilter.h"
 #include "daemonize.h"
+#include "errors.h"
+#include "helpers.h"
 #include "sequence.h"
-#include "workerpool.h"
-
-// TODO: set these values by the cli
-const int NUM_THREADS = 4;
-
-// done controls when to stop the antman threads
-volatile sig_atomic_t done = 0;
-
-// sigTermHandler is called in the event of a SIGTERM signal
-void sigTermHandler(int signum)
-{
-    slog(0, SLOG_INFO, "sigterm received, shutting down the antman daemon...");
-    done = 1;
-}
-
-// catchSigterm is used to exit the daemon when `antman --stop` is called
-void catchSigterm()
-{
-    static struct sigaction action;
-    memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = sigTermHandler;
-    sigaction(SIGTERM, &action, NULL);
-}
+#include "watcher.h"
 
 // startWatching is used to start the directory watcher inside a thread
 void *startWatching(void *param)
@@ -45,122 +24,6 @@ void *startWatching(void *param)
         exit(1);
     }
     return NULL;
-}
-
-// startDaemon converts the current program to a daemon process, launches some threads and starts directory watching
-int startDaemon(config_t *amConfig, watcherArgs_t *wargs)
-{
-
-    // try daemonising the program
-    slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", amConfig->currentLogFile);
-    int res;
-    if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
-    {
-        slog(0, SLOG_ERROR, "could not start the antman daemon");
-        return 1;
-    }
-
-    // divert log to file
-    SlogConfig slgCfg;
-    slog_config_get(&slgCfg);
-    slgCfg.nToFile = 1;
-    slgCfg.nFileStamp = 0;
-    slgCfg.nTdSafe = 1;
-    slog_config_set(&slgCfg);
-
-    // log some progress
-    slog(0, SLOG_INFO, "checking the antman daemon...");
-    pid_t pid = getpid();
-    slog(0, SLOG_LIVE, "\t- daemon pid: %d", pid);
-
-    // update the config with the PID
-    // TODO: this should probably be done in a lock file instead...
-    amConfig->pid = pid;
-    if (writeConfig(amConfig, amConfig->filename) != 0)
-    {
-        slog(0, SLOG_ERROR, "failed to update config file");
-        return 1;
-    }
-
-    // set up the signal catcher
-    catchSigterm();
-
-    // initialise fswatch
-    slog(0, SLOG_INFO, "initialising fswatch...");
-    if (FSW_OK != fsw_init_library())
-    {
-        slog(0, SLOG_ERROR, "fswatch cannot be initialised");
-        slog(0, SLOG_LIVE, "\t- %s", fsw_last_error());
-        return 1;
-    }
-    const FSW_HANDLE handle = fsw_init_session(fsevents_monitor_type);
-
-    // add the path(s) for the watcher to watch
-    if (FSW_OK != fsw_add_path(handle, amConfig->watchDir))
-    {
-        slog(0, SLOG_ERROR, "could not add a path for libfswatch: %s", amConfig->watchDir);
-        return 1;
-    }
-    slog(0, SLOG_LIVE, "\t- added directory to the watch path: %s", amConfig->watchDir);
-
-    // launch the worker threads
-    slog(0, SLOG_INFO, "creating workerpool...");
-    tpool_t *wp;
-    wp = tpool_create(NUM_THREADS);
-    slog(0, SLOG_LIVE, "\t- created workerpool of %d threads", NUM_THREADS);
-    wargs->workerPool = wp;
-
-    // set the watcher callback function
-    if (FSW_OK != fsw_set_callback(handle, watcherCallback, wargs))
-    {
-        slog(0, SLOG_ERROR, "could not set the callback function for libfswatch");
-        return 1;
-    }
-
-    // start the watcher on a new thread
-    pthread_t start_thread;
-    if (pthread_create(&start_thread, NULL, startWatching, (void *)&handle))
-    {
-        slog(0, SLOG_ERROR, "could not start the watcher thread");
-        return 1;
-    }
-    slog(0, SLOG_INFO, "antman is waiting for sequence data...");
-
-    // run antman until a stop signal is received
-    while (!done)
-    {
-        pause();
-    }
-
-    // stop the directory watcher
-    slog(0, SLOG_LIVE, "\t- stopping the directory watcher");
-    if (FSW_OK != fsw_stop_monitor(handle))
-    {
-        slog(0, SLOG_ERROR, "error stopping the directory watcher");
-        return 1;
-    }
-    sleep(5);
-    if (FSW_OK != fsw_destroy_session(handle))
-    {
-        slog(0, SLOG_ERROR, "error destroying the fswatch session");
-        return 1;
-    }
-
-    // wait for the directory watcher thread to finish
-    if (pthread_join(start_thread, NULL))
-    {
-        slog(0, SLOG_ERROR, "error joining directory watcher thread");
-        return 1;
-    }
-
-    // wait on any active threads in the workerpool
-    slog(0, SLOG_LIVE, "\t- stopping the sketching threads");
-    tpool_wait(wp);
-
-    // destroy the workerpool
-    tpool_destroy(wp);
-
-    return 0;
 }
 
 // daemonize is used to fork, detach, fork again, change permissions, change directory and then reopen streams
@@ -247,4 +110,91 @@ int daemonize(char *name, char *path, char *outfile, char *errfile, char *infile
     stderr = fopen(errfile, "w+"); //fd=2
 
     return (0);
+}
+
+/*****************************************************************************
+ * createCallback is the function that will be called when fswatch detects a
+ * change in the watch directory.
+ */
+void createCallback(fsw_cevent const *const events, const unsigned int event_num, void *args)
+{
+    watcherArgs_t *wargs;
+    wargs = (watcherArgs_t *)args;
+
+    // set the flags from libfswatch that we want to check events against
+    int fileCheckList = Created | IsFile;
+
+    //NoOp = 0,                     /**< No event has occurred. */
+    //PlatformSpecific = (1 << 0),  /**< Platform-specific placeholder for event type that cannot currently be mapped. */
+    //Created = (1 << 1),           /**< An object was created. */
+    //Updated = (1 << 2),           /**< An object was updated. */
+    //Removed = (1 << 3),           /**< An object was removed. */
+    //Renamed = (1 << 4),           /**< An object was renamed. */
+    //OwnerModified = (1 << 5),     /**< The owner of an object was modified. */
+    //AttributeModified = (1 << 6), /**< The attributes of an object were modified. */
+    //MovedFrom = (1 << 7),         /**< An object was moved from this location. */
+    //MovedTo = (1 << 8),           /**< An object was moved to this location. */
+    //IsFile = (1 << 9),            /**< The object is a file. */
+    //IsDir = (1 << 10),            /**< The object is a directory. */
+    //IsSymLink = (1 << 11),        /**< The object is a symbolic link. */
+    //Link = (1 << 12),             /**< The link count of an object has changed. */
+    //Overflow = (1 << 13)          /**< The event queue has overflowed. */
+
+    // loop over the events
+    unsigned int i, j;
+    for (i = 0; i < event_num; i++)
+    {
+        fsw_cevent const *e = &events[i];
+
+        // check if the event concerns a filetype we are interested in
+        char *ext = getExtension(e->path);
+        if ((strcmp(ext, "fastq") == 0) || (strcmp(ext, "fq") == 0))
+        {
+            // combine the flags for the event into a bitmask
+            unsigned int setFlags = 0;
+            for (j = 0; j < e->flags_num; j++)
+            {
+                setFlags |= e->flags[j];
+            }
+
+            // use the bitmask to determine how to handle the event
+            if ((setFlags & fileCheckList) == fileCheckList)
+            {
+                slog(0, SLOG_LIVE, "[watcher]\tfound a FASTQ file: %s", e->path);
+            }
+            else
+            {
+                if ((setFlags & 1 << 3) == 1 << 3)
+                {
+                    slog(0, SLOG_LIVE, "[watcher]\tignoring a deleted file");
+                }
+                else
+                {
+                    slog(0, SLOG_LIVE, "[watcher]\tignoring a file modification"); // TODO: is this catch right?
+                }
+                continue;
+            }
+
+            // call the watcherCreateJob function to check the file init a job
+            watcherJob_t *job;
+            int err = 0;
+            if ((err = wjobCreate(wargs, events[i].path, &job)) != 0)
+            {
+                slog(0, SLOG_ERROR, "could not create watcher job");
+                printError(err);
+                return;
+            }
+
+            // add the job to the threadpool
+            if (!tpool_add_work(wargs->threadPool, processFastq, job))
+            {
+                slog(0, SLOG_ERROR, "could not queue watcher job");
+                return;
+            }
+        }
+        else
+        {
+            slog(0, SLOG_LIVE, "[watcher]\tignoring a file (%s)", e->path);
+        }
+    }
 }

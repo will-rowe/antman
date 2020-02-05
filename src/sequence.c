@@ -50,65 +50,25 @@ void processRef(char *filepath, bloomfilter_t *bf, int kSize, int sketchSize)
 // processFastq
 void processFastq(void *args)
 {
-    watcherArgs_t *wargs;
-    wargs = (watcherArgs_t *)args;
+    // get the job
+    watcherJob_t *job;
+    job = (watcherJob_t *)args;
+
+    // open the sequence file
     gzFile fp;
     kseq_t *seq;
     int l;
-    fp = gzopen(wargs->filepath, "r");
+    fp = gzopen(job->filepath, "r");
     seq = kseq_init(fp);
 
     // process each sequence in the fastq file
     while ((l = kseq_read(seq)) >= 0)
     {
 
-        //slog(0, SLOG_INFO, "name: %s\n", seq->name.s);
+        slog(0, SLOG_INFO, "got sequence: %s\n", seq->name.s);
         //if (seq->comment.l) printf("comment: %s\n", seq->comment.s);
         //slog(0, SLOG_INFO, "seq: %s\n;len: %d\n", seq->seq.s, l);
         //if (seq->qual.l) printf("qual: %s\n", seq->qual.s);
-
-        // sketch the read
-        uint64_t *sketch = calloc(wargs->sketch_size, sizeof(uint64_t));
-        if (!sketch)
-        {
-            slog(0, SLOG_ERROR, "could not allocate a sketch");
-            exit(1);
-        }
-        sketchSequence(seq->seq.s, l, wargs->kSize, wargs->sketch_size, NULL, sketch);
-        slog(0, SLOG_LIVE, "\t- [sketcher]:\tsketched a %dbp sequence", l);
-
-        // estimate read containment within the reference
-        // lock the thread whilst using the bloom filter
-        int intersections = 0, i;
-        pthread_mutex_lock(&mutex1);
-        for (i = 0; i < wargs->sketch_size; i++)
-        {
-            uint8_t result = 0;
-            if (bfQuery(wargs->bloomFilter, &*(sketch + i), wargs->kSize, &result) != 0)
-            {
-                fprintf(stderr, "could not query bloom filter\n");
-                return;
-            }
-            if (result == 1)
-            {
-                intersections++;
-            }
-        }
-        pthread_mutex_unlock(&mutex1);
-
-        intersections -= (int)floor(wargs->fp_rate * wargs->sketch_size);
-        double containmentEstimate = ((double)intersections / wargs->sketch_size);
-
-        int refTotalKmers = REF_LENGTH - wargs->kSize + 1;
-        int queryTotalKmers = l - wargs->kSize + 1;
-
-        //slog(0, SLOG_INFO, "%d\t%d\t%d\t%f", intersections, refTotalKmers, queryTotalKmers, containmentEstimate);
-
-        double jaccardEst = ((double)(queryTotalKmers * containmentEstimate)) / ((queryTotalKmers + refTotalKmers) - (queryTotalKmers * containmentEstimate));
-
-        slog(0, SLOG_LIVE, "\t- [sketcher]:\tjaccardEst by containment = %f", jaccardEst);
-
-        free(sketch);
     }
     kseq_destroy(seq);
 
@@ -117,8 +77,9 @@ void processFastq(void *args)
     {
         slog(0, SLOG_ERROR, "EOF error for FASTQ file: %d\n", l);
     }
-
     gzclose(fp);
-    free(wargs);
+
+    if (wjobDestroy(job))
+        slog(0, SLOG_ERROR, "failed to destroy job for FASTQ file: %d\n", l);
     return;
 }

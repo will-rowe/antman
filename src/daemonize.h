@@ -4,16 +4,13 @@
 #ifndef DAEMONIZE_H
 #define DAEMONIZE_H
 
-#include "config.h"
-#include "watcher.h"
+#include <libfswatch/c/libfswatch.h>
 
 /*****************************************************************************
  * function prototypes
  */
-void sigTermHandler(int signum);
-void catchSigterm();
 void *startWatching(void *param);
-int startDaemon(config_t *amConfig, watcherArgs_t *wargs);
 int daemonize(char *name, char *path, char *outfile, char *errfile, char *infile);
+void createCallback(fsw_cevent const *const events, const unsigned int event_num, void *args);
 
 #endif

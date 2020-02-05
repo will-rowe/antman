@@ -15,5 +15,6 @@ int checkDirectory(const char *dirName, bool create);
 int checkFilePath(const char *filePath);
 int getTimeStamp(char **timeStampPtr);
 void slog_get_date(SlogDate *pDate);
+char *getExtension(const char *filename);
 
 #endif

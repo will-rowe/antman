@@ -1,100 +1,115 @@
+
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
 
-#include "3rd-party/slog.h"
-
+#include "errors.h"
 #include "watcher.h"
-#include "sequence.h"
 
-// getExt takes a filename and returns the extension
-char *getExt(const char *filename)
-{
-
-    // strrchr finds the final occurance of a char
-    char *dot = strrchr(filename, '.');
-    if (!dot || dot == filename)
-        return "";
-    return dot + 1;
-}
-
-// watcherCallback is a test callback function for when the watcher spots a change
-void watcherCallback(fsw_cevent const *const events, const unsigned int event_num, void *args)
+/*****************************************************************************
+ * wargsInit will initiate the watcher arguments, which are used by the
+ * libfswatch file watcher to process sequence files.
+ * 
+ * arguments:
+ *      tp          -   a pointer to an initiated threadpool
+ *      config      -   an initated and populated in-memory config
+ * 
+ * returns:
+ *      an initiated watcherArgs_t struct
+ * 
+ * note:
+ *      the user must free the returned watcherArgs_t
+ *      no checking is done of the tp or config arguments
+ */
+watcherArgs_t *wargsInit(tpool_t *tp, config_t *config)
 {
     watcherArgs_t *wargs;
-    wargs = (watcherArgs_t *)args;
-
-    // set the flags from libfswatch that we want to check events against
-    int fileCheckList = Created | IsFile;
-
-    //NoOp = 0,                     /**< No event has occurred. */
-    //PlatformSpecific = (1 << 0),  /**< Platform-specific placeholder for event type that cannot currently be mapped. */
-    //Created = (1 << 1),           /**< An object was created. */
-    //Updated = (1 << 2),           /**< An object was updated. */
-    //Removed = (1 << 3),           /**< An object was removed. */
-    //Renamed = (1 << 4),           /**< An object was renamed. */
-    //OwnerModified = (1 << 5),     /**< The owner of an object was modified. */
-    //AttributeModified = (1 << 6), /**< The attributes of an object were modified. */
-    //MovedFrom = (1 << 7),         /**< An object was moved from this location. */
-    //MovedTo = (1 << 8),           /**< An object was moved to this location. */
-    //IsFile = (1 << 9),            /**< The object is a file. */
-    //IsDir = (1 << 10),            /**< The object is a directory. */
-    //IsSymLink = (1 << 11),        /**< The object is a symbolic link. */
-    //Link = (1 << 12),             /**< The link count of an object has changed. */
-    //Overflow = (1 << 13)          /**< The event queue has overflowed. */
-
-    // loop over the events
-    unsigned int i, j;
-    for (i = 0; i < event_num; i++)
+    if ((wargs = malloc(sizeof(watcherArgs_t))) != NULL)
     {
-        fsw_cevent const *e = &events[i];
-
-        // check if the event concerns a filetype we are interested in
-        // TODO: this is just an extension test for now, will make it more robust...
-        char *ext = getExt(e->path);
-        if ((strcmp(ext, "fastq") == 0) || (strcmp(ext, "fq") == 0))
-        {
-            // combine the flags for the event into a bitmask
-            unsigned int setFlags = 0;
-            for (j = 0; j < e->flags_num; j++)
-            {
-                setFlags |= e->flags[j];
-            }
-
-            // use the bitmask to determine how to handle the event
-            if ((setFlags & fileCheckList) == fileCheckList)
-            {
-                slog(0, SLOG_LIVE, "\t- [watcher]:\tfound a FASTQ file: %s", e->path);
-            }
-            else
-            {
-                if ((setFlags & 1 << 3) == 1 << 3)
-                {
-                    slog(0, SLOG_LIVE, "\t- [watcher]:\tignoring a deleted file");
-                }
-                else
-                {
-                    slog(0, SLOG_LIVE, "\t- [watcher]:\tignoring a file modification"); // TODO: is this catch right?
-                }
-                continue;
-            }
-
-            // create a modifed wargs which contains the newly found file
-            // TODO: this is really clunky, make it better
-            watcherArgs_t *wargs2 = malloc(sizeof(watcherArgs_t));
-            if (wargs2 == NULL)
-                slog(0, SLOG_ERROR, "could not allocate watcher arguments");
-            wargs2->workerPool = wargs->workerPool;
-            wargs2->bloomFilter = wargs->bloomFilter;
-            wargs2->kSize = wargs->kSize;
-            wargs2->sketch_size = wargs->sketch_size;
-            wargs2->fp_rate = wargs2->fp_rate;
-            strcpy(wargs2->filepath, events[i].path);
-
-            // process the fastq file using the workerpool
-            if (!tpool_add_work(wargs->workerPool, processFastq, wargs2))
-            {
-                slog(0, SLOG_ERROR, "\t- failed to send the filepath to the workerpool");
-            }
-        }
+        wargs->threadPool = tp;
+        wargs->config = config;
     }
+    return wargs;
+}
+
+/*****************************************************************************
+ * wargsDestroy will free the watcher argument struct, as well as the filepath
+ * if there is one.
+ * 
+ * arguments:
+ *      wargs          -   a pointer to an initiated watcherArgs_t
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *      it will not free any config or threadpool attached to the struct
+ */
+int wargsDestroy(watcherArgs_t *wargs)
+{
+    if (wargs)
+    {
+        tpool_destroy(wargs->threadPool);
+        configDestroy(wargs->config);
+        free(wargs);
+        return 0;
+    }
+    return ERROR_NULL_ARGUMENT;
+}
+
+/*****************************************************************************
+ * wjobCreate will create a new job in response to a file being found. It will
+ * check a filepath, initialise a watcherJob_t and add the file.
+ * 
+ * arguments:
+ *      wargs          -   a pointer to an initiated watcherArgs_t
+ *      fp             -   a file path to check and attach
+ *      resultPtr      -   a pointer to a watchJob_t pointer, for the result
+ * 
+ * returns:
+ *      0 on success, or an error code
+ * 
+ * note:
+ *      the user must check and free the returned watcherJob_t
+ *      no checking is done of the tp or config arguments
+ */
+int wjobCreate(watcherArgs_t *wargs, char *fp, watcherJob_t **resultPtr)
+{
+    if (!wargs || !fp)
+        return ERROR_NULL_ARGUMENT;
+
+    // check the file
+    if (access(fp, R_OK | W_OK) == -1)
+    {
+        return ERROR_ACCESS;
+    }
+
+    // set up the job
+    if (((*resultPtr) = malloc(sizeof(watcherJob_t))) == NULL)
+        return ERROR_MALLOC;
+    (*resultPtr)->wargs = wargs;
+    (*resultPtr)->filepath = strdup(fp);
+    return 0;
+}
+
+/*****************************************************************************
+ * wjobDestroy will free the watcher job struct.
+ * 
+ * arguments:
+ *      wjob          -   a pointer to an initiated watcherJob_t
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *      it will not free any config or threadpool attached to the struct
+ */
+int wjobDestroy(watcherJob_t *wjob)
+{
+    if (wjob)
+    {
+        free(wjob->filepath);
+        free(wjob);
+        return 0;
+    }
+    return ERROR_NULL_ARGUMENT;
 }

@@ -130,3 +130,15 @@ int getTimeStamp(char **timeStampPtr)
     }
     return 0;
 }
+
+/*****************************************************************************
+ * getExtension takes a filename and returns the extension (if there is one).
+ */
+char *getExtension(const char *filename)
+{
+    // strrchr finds the final occurance of a char
+    char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename)
+        return "";
+    return dot + 1;
+}

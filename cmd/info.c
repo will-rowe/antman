@@ -73,7 +73,7 @@ int checkPID(config_t *amConfig)
 
             // if not running, update the config
             amConfig->pid = -1;
-            if (writeConfig(amConfig, amConfig->filename) != 0)
+            if (configWrite(amConfig, amConfig->filename) != 0)
             {
                 return -2;
             }

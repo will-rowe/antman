@@ -16,7 +16,6 @@
 #include "subcommands.h"
 #include "../src/config.h"
 #include "../src/helpers.h"
-#include "../src/daemonize.h"
 
 /*****************************************************************************
  * printMainHelp displays the main program help.
@@ -106,6 +105,7 @@ void printShrinkHelp(void)
            "Usage:\n"
            "\t%s shrink [options]\n\n"
            "Daemon options:\n"
+           "\t -t int                               \t number of sketching threads to use (default: 1)\n"
            "\n"
            "Miscellaneous options:\n"
            "\t -h                                   \t prints this help and exits\n",
@@ -141,7 +141,7 @@ void printStopHelp(void)
 config_t *configLoader(void)
 {
     // init an empty config struct
-    config_t *config = initConfig();
+    config_t *config = configInit();
     if (config == NULL)
     {
         fprintf(stderr, "error: failed to init a config\n\n");
@@ -158,18 +158,18 @@ config_t *configLoader(void)
         }
 
         // write a new config
-        if (writeConfig(config, CONFIG_LOCATION) != 0)
+        if (configWrite(config, CONFIG_LOCATION) != 0)
         {
-            destroyConfig(config);
+            configDestroy(config);
             fprintf(stderr, "\nerror: failed to create a config file at %s\n\n", CONFIG_LOCATION);
             return NULL;
         }
     }
 
     // load the config file into the struct
-    if (loadConfig(config, CONFIG_LOCATION) != 0)
+    if (configLoad(config, CONFIG_LOCATION) != 0)
     {
-        destroyConfig(config);
+        configDestroy(config);
         fprintf(stderr, "\nerror: failed to the load config file\n\n");
         return NULL;
     }
@@ -190,7 +190,7 @@ config_t *configLoader(void)
 int greet(config_t *config, bool checkDB, char *cmd)
 {
     // check the config
-    if (checkConfig(config, checkDB) != 0)
+    if (configCheck(config, checkDB) != 0)
     {
         return -1;
     }
@@ -212,6 +212,8 @@ int greet(config_t *config, bool checkDB, char *cmd)
     slog(0, SLOG_INFO, "\t- k-mer size: %d", config->kSize);
     slog(0, SLOG_INFO, "\t- max number of k-mers per bloom filter: %d", config->maxElements);
     slog(0, SLOG_INFO, "\t- bloom filter false positive rate: %f", config->fpRate);
+    if (strcmp(cmd, "shrink") == 0)
+        slog(0, SLOG_INFO, "\t- number of threads: %f", config->numThreads);
     slog(0, SLOG_LIVE, "starting %s subcommand...", cmd);
     return 0;
 }
@@ -276,7 +278,7 @@ int main(int argc, char *argv[])
         if ((config = configLoader()) == NULL)
             return -1;
         int retVal = info(config, pidOnly);
-        destroyConfig(config);
+        configDestroy(config);
         return retVal;
     }
 
@@ -293,7 +295,7 @@ int main(int argc, char *argv[])
         if (checkPID(config) >= 0)
         {
             fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
 
@@ -305,7 +307,7 @@ int main(int argc, char *argv[])
             if (c == 'h')
             {
                 printSetHelp();
-                destroyConfig(config);
+                configDestroy(config);
                 return 0;
             }
 
@@ -331,25 +333,25 @@ int main(int argc, char *argv[])
         // check for any errors in the subcommand arguments
         if (optErr)
         {
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
         if (!optCheck)
         {
             fprintf(stderr, "error: no options passed to set, nothing to do\n\n");
             printSetHelp();
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
 
         // write the in-memory config to disk
-        if (writeConfig(config, config->filename) != 0)
+        if (configWrite(config, config->filename) != 0)
         {
             fprintf(stderr, "could not update the config file\n");
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
-        destroyConfig(config);
+        configDestroy(config);
         return 0;
     }
 
@@ -366,7 +368,7 @@ int main(int argc, char *argv[])
         if (checkPID(config) >= 0)
         {
             fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
 
@@ -377,7 +379,7 @@ int main(int argc, char *argv[])
             if (c == 'h')
             {
                 printSketchHelp();
-                destroyConfig(config);
+                configDestroy(config);
                 return 0;
             }
             if (c == 'k')
@@ -412,14 +414,14 @@ int main(int argc, char *argv[])
         // check for any errors in the subcommand arguments
         if (optErr)
         {
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
 
         // greet the user and check the config
         if (greet(config, false, argv[om.ind]))
         {
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
 
@@ -427,7 +429,7 @@ int main(int argc, char *argv[])
         // TODO: only BIGSI hardcoded for now
         if (setupDB(config, 0))
         {
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
         slog(0, SLOG_INFO, "\t- number of hashes per bloom filter: %llu", config->numHashes);
@@ -442,7 +444,7 @@ int main(int argc, char *argv[])
             useSTDIN = false;
             if (sketch(config, argv[i]))
             {
-                destroyConfig(config);
+                configDestroy(config);
                 return -1;
             }
         }
@@ -450,108 +452,20 @@ int main(int argc, char *argv[])
         {
             if (sketch(config, NULL))
             {
-                destroyConfig(config);
+                configDestroy(config);
                 return -1;
             }
         }
 
         // finish up by writing the run info to the config
-        if (writeConfig(config, config->filename) != 0)
+        if (configWrite(config, config->filename) != 0)
         {
             fprintf(stderr, "could not update the config file\n");
-            destroyConfig(config);
+            configDestroy(config);
             return -1;
         }
         slog(0, SLOG_LIVE, "finished");
-        destroyConfig(config);
-        return 0;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-    /* - shrink - */
-    if (strcmp(argv[om.ind], "shrink") == 0)
-    {
-
-        // check the arguments for shrink
-        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "h", 0)) >= 0)
-        {
-            if (c == 'h')
-            {
-                printShrinkHelp();
-                return 0;
-            }
-        }
-
-        // load the config
-        if ((config = configLoader()) == NULL)
-            return -1;
-
-        // check not already running
-        if (checkPID(config) >= 0)
-        {
-            fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
-            destroyConfig(config);
-            return -1;
-        }
-
-        // set up a default log if needed
-        if (config->currentLogFile == NULL)
-        {
-            if (createLogFile(config) != 0)
-            {
-                destroyConfig(config);
-                return -1;
-            }
-        }
-
-        // greet the user and check the config
-        if (greet(config, true, argv[om.ind]))
-        {
-            destroyConfig(config);
-            return -1;
-        }
-
-        // load the database
-        if (loadDB(config, 0))
-        {
-            destroyConfig(config);
-            return -1;
-        }
-        slog(0, SLOG_INFO, "\t- reference database location: %s", config->dbDir);
-        slog(0, SLOG_INFO, "\t- number of hashes functions used in BIGSI: %llu", config->numHashes);
-        slog(0, SLOG_INFO, "\t- number of rows in BIGSI: %llu", config->numBits);
-        slog(0, SLOG_INFO, "\t- number of colours in BIGSI: %u", config->bigsi->colourIterator);
-
-        // run the shrink function
-        shrink(config);
-
-        // TODO: I'm keeping all of this in the main function for now
-        // wargs seems unecessary when I have an in-memory config
-        // set up the watch directory
-        slog(0, SLOG_INFO, "setting up the directory watcher...");
-        watcherArgs_t *wargs = malloc(sizeof(watcherArgs_t));
-        if (wargs == NULL)
-        {
-            slog(0, SLOG_ERROR, "could not allocate the watcher arguments");
-            destroyConfig(config);
-            return 1;
-        }
-        wargs->kSize = config->kSize;
-        wargs->fp_rate = config->fpRate;
-
-        // start the daemon
-        slog(0, SLOG_INFO, "starting the daemon...");
-        if (startDaemon(config, wargs) != 0)
-        {
-            free(wargs);
-            destroyConfig(config);
-            return -1;
-        }
-
-        // daemon has been killed
-        // TODO: have shrink destroy the config when done?
-        free(wargs);
-        destroyConfig(config);
+        configDestroy(config);
         return 0;
     }
 
@@ -579,8 +493,71 @@ int main(int argc, char *argv[])
             return -1;
         }
         int retVal = stop(config);
-        destroyConfig(config);
+        configDestroy(config);
         return retVal;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    /* - shrink - */
+    if (strcmp(argv[om.ind], "shrink") == 0)
+    {
+        // load the config
+        if ((config = configLoader()) == NULL)
+            return -1;
+
+        // TODO: for now, only run sketch when the daemon is not already running - do we want to handle this differently?
+        if (checkPID(config) >= 0)
+        {
+            fprintf(stderr, "error: daemon is already running on PID %u\n\n", config->pid);
+            configDestroy(config);
+            return -1;
+        }
+
+        // check the arguments for shrink
+        while ((c = ketopt(&os, argc - om.ind, argv + om.ind, 1, "ht:", 0)) >= 0)
+        {
+            if (c == 'h')
+            {
+                printShrinkHelp();
+                configDestroy(config);
+                return 0;
+            }
+
+            if (c == 't')
+                config->numThreads = atoi(os.arg);
+        }
+
+        // set up a default log if needed
+        if (config->currentLogFile == NULL)
+        {
+            if (createLogFile(config) != 0)
+            {
+                configDestroy(config);
+                return -1;
+            }
+        }
+
+        // greet the user and check the config
+        if (greet(config, true, argv[om.ind]))
+        {
+            configDestroy(config);
+            return -1;
+        }
+
+        // load the database
+        if (loadDB(config, 0))
+        {
+            configDestroy(config);
+            return -1;
+        }
+        slog(0, SLOG_INFO, "\t- reference database location: %s", config->dbDir);
+        slog(0, SLOG_INFO, "\t- number of hashes functions used in BIGSI: %llu", config->numHashes);
+        slog(0, SLOG_INFO, "\t- number of rows in BIGSI: %llu", config->numBits);
+        slog(0, SLOG_INFO, "\t- number of colours in BIGSI: %u", config->bigsi->colourIterator);
+
+        // run the shrink function
+        slog(0, SLOG_LIVE, "shrinking...");
+        return shrink(config);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////

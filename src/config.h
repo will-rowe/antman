@@ -38,22 +38,23 @@ typedef struct config
     int maxElements;
     double fpRate;
 
-    // calculated for bloom filters / BIGSI
+    // calculated for bloom filters / BIGSI:
     uint64_t numBits;   // number of bits in each input bloom filter
     uint64_t numHashes; // number of hash functions used to generate input bloom filter
 
-    // database struct used when config in memory
-    bigsi_t *bigsi;
+    // in-memory fields only:
+    bigsi_t *bigsi; // database struct used when config in memory
+    int numThreads;
 } config_t;
 
 /*****************************************************************************
  * function prototypes
  */
-config_t *initConfig();
-void destroyConfig(config_t *config);
-int writeConfig(config_t *config, char *configFile);
-int loadConfig(config_t *config, char *configFile);
-int checkConfig(config_t *config, bool testDB);
+config_t *configInit();
+void configDestroy(config_t *config);
+int configWrite(config_t *config, char *configFile);
+int configLoad(config_t *config, char *configFile);
+int configCheck(config_t *config, bool testDB);
 int setConfigField(config_t *config, int field, char *text);
 int createLogFile(config_t *config);
 int setupDB(config_t *config, int dbType);
