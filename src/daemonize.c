@@ -194,7 +194,7 @@ void createCallback(fsw_cevent const *const events, const unsigned int event_num
         }
         else
         {
-            slog(0, SLOG_LIVE, "[watcher]\tignoring a file (%s)", e->path);
+            slog(0, SLOG_LIVE, "[watcher]\tignoring a file: %s", e->path);
         }
     }
 }

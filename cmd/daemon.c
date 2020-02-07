@@ -56,7 +56,7 @@ int shrink(config_t *config)
     int err = 0;
 
     // divert log to file
-    slog(0, SLOG_LIVE, "\t- redirected antman log to file: %s", config->currentLogFile);
+    slog(0, SLOG_LIVE, "\t- redirected log to file: %s", config->currentLogFile);
     SlogConfig slgCfg;
     slog_config_get(&slgCfg);
     slgCfg.nToFile = 1;
@@ -68,7 +68,7 @@ int shrink(config_t *config)
     int res;
     if ((res = daemonize(PROG_NAME, NULL, NULL, NULL, NULL)) != 0)
     {
-        slog(0, SLOG_ERROR, "could not start the antman daemon");
+        slog(0, SLOG_ERROR, "could not start the daemon");
         return 1;
     }
 
@@ -76,7 +76,7 @@ int shrink(config_t *config)
     catchSigterm();
 
     // log some progress
-    slog(0, SLOG_INFO, "checking the antman daemon...");
+    slog(0, SLOG_INFO, "checking the daemon...");
     pid_t pid = getpid();
     slog(0, SLOG_LIVE, "\t- daemon pid: %d", pid);
 
@@ -142,7 +142,7 @@ int shrink(config_t *config)
     slog(0, SLOG_LIVE, "\t- started the watcher on a new thread");
     slog(0, SLOG_INFO, "waiting for sequence data...");
 
-    // run antman until a stop signal is received
+    // run daemon until a stop signal is received
     while (!SHUTDOWN_SIGNAL)
     {
         pause();

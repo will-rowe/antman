@@ -39,16 +39,15 @@
 
 static SlogConfig g_slogCfg;
 static SlogTag g_SlogTags[] =
-{
-    { 0, "NONE", NULL },
-    { 1, "LIVE", CLR_NORMAL },
-    { 2, "INFO", CLR_GREEN },
-    { 3, "WARN", CLR_YELLOW },
-    { 4, "DEBUG", CLR_BLUE },
-    { 5, "ERROR", CLR_RED},
-    { 6, "FATAL", CLR_RED },
-    { 7, "PANIC", CLR_WHITE }
-};
+    {
+        {0, "NONE", NULL},
+        {1, "LIVE", CLR_NORMAL},
+        {2, "INFO", CLR_GREEN},
+        {3, "WARN", CLR_YELLOW},
+        {4, "DEBUG", CLR_BLUE},
+        {5, "ERROR", CLR_RED},
+        {6, "FATAL", CLR_RED},
+        {7, "PANIC", CLR_WHITE}};
 
 void slog_sync_lock()
 {
@@ -64,7 +63,7 @@ void slog_sync_lock()
 
 void slog_sync_unlock()
 {
-    if (g_slogCfg.nTdSafe) 
+    if (g_slogCfg.nTdSafe)
     {
         if (pthread_mutex_unlock(&g_slogCfg.slogLock))
         {
@@ -111,12 +110,12 @@ static inline int clock_gettime(int clock_id, struct timespec *ts)
 {
     struct timeval tv;
 
-    if (clock_id != CLOCK_REALTIME) 
+    if (clock_id != CLOCK_REALTIME)
     {
         errno = EINVAL;
         return -1;
     }
-    if (gettimeofday(&tv, NULL) < 0) 
+    if (gettimeofday(&tv, NULL) < 0)
     {
         return -1;
     }
@@ -133,8 +132,8 @@ void slog_get_date(SlogDate *pDate)
     localtime_r(&rawtime, &timeinfo);
 
     /* Get System Date */
-    pDate->year = timeinfo.tm_year+1900;
-    pDate->mon = timeinfo.tm_mon+1;
+    pDate->year = timeinfo.tm_year + 1900;
+    pDate->mon = timeinfo.tm_mon + 1;
     pDate->day = timeinfo.tm_mday;
     pDate->hour = timeinfo.tm_hour;
     pDate->min = timeinfo.tm_min;
@@ -146,27 +145,29 @@ void slog_get_date(SlogDate *pDate)
     pDate->usec = now.tv_nsec / 10000000;
 }
 
-const char* slog_version(int nMin)
+const char *slog_version(int nMin)
 {
     static char sVersion[128];
 
     /* Version short */
-    if (nMin) sprintf(sVersion, "%d.%d.%d", 
-        SLOGVERSION_MAJOR, SLOGVERSION_MINOR, SLOGBUILD_NUM);
+    if (nMin)
+        sprintf(sVersion, "%d.%d.%d",
+                SLOGVERSION_MAJOR, SLOGVERSION_MINOR, SLOGBUILD_NUM);
 
     /* Version long */
-    else sprintf(sVersion, "%d.%d build %d (%s)", 
-        SLOGVERSION_MAJOR, SLOGVERSION_MINOR, SLOGBUILD_NUM, __DATE__);
+    else
+        sprintf(sVersion, "%d.%d build %d (%s)",
+                SLOGVERSION_MAJOR, SLOGVERSION_MINOR, SLOGBUILD_NUM, __DATE__);
 
     return sVersion;
 }
 
-void slog_prepare_output(const char* pStr, const SlogDate *pDate, int nType, int nColor, char* pOut, int nSize)
+void slog_prepare_output(const char *pStr, const SlogDate *pDate, int nType, int nColor, char *pOut, int nSize)
 {
     char sDate[32];
-    snprintf(sDate, sizeof(sDate), "%02d.%02d.%02d-%02d:%02d:%02d.%02d", 
-                    pDate->year, pDate->mon, pDate->day, pDate->hour, 
-                    pDate->min, pDate->sec, pDate->usec);
+    snprintf(sDate, sizeof(sDate), "%02d.%02d.%02d-%02d:%02d:%02d.%02d",
+             pDate->year, pDate->mon, pDate->day, pDate->hour,
+             pDate->min, pDate->sec, pDate->usec);
 
     /* Walk throu */
     for (int i = 0;; i++)
@@ -194,13 +195,14 @@ void slog_to_file(char *pStr, const char *pFile, SlogDate *pDate)
     char sFileName[PATH_MAX];
     memset(sFileName, 0, sizeof(sFileName));
 
-    if (g_slogCfg.nFileStamp) 
+    if (g_slogCfg.nFileStamp)
         snprintf(sFileName, sizeof(sFileName), "%s-%02d-%02d-%02d", pFile, pDate->year, pDate->mon, pDate->day);
-    else 
+    else
         snprintf(sFileName, sizeof(sFileName), "%s", pFile);
 
     FILE *fp = fopen(sFileName, "a");
-    if (fp == NULL) return;
+    if (fp == NULL)
+        return;
 
     fprintf(fp, "%s\n", pStr);
     fclose(fp);
@@ -208,13 +210,15 @@ void slog_to_file(char *pStr, const char *pFile, SlogDate *pDate)
 
 int slog_parse_config(const char *pConfig)
 {
-    if (pConfig == NULL) return 0;
+    if (pConfig == NULL)
+        return 0;
 
     FILE *pFile = fopen(pConfig, "r");
-    if(pFile == NULL) return 0;
+    if (pFile == NULL)
+        return 0;
 
     char sArg[256], sName[32];
-    while(fscanf(pFile, "%s %[^\n]\n", sName, sArg) == 2)
+    while (fscanf(pFile, "%s %[^\n]\n", sName, sArg) == 2)
     {
         if ((strlen(sName) > 0) && (sName[0] == '#'))
         {
@@ -255,9 +259,9 @@ void slog(int nLevel, int nFlag, const char *pMsg, ...)
 {
     slog_sync_lock();
 
-    if (g_slogCfg.nSilent && 
-        (nFlag == SLOG_DEBUG || 
-        nFlag == SLOG_LIVE)) 
+    if (g_slogCfg.nSilent &&
+        (nFlag == SLOG_DEBUG ||
+         nFlag == SLOG_LIVE))
     {
         slog_sync_unlock();
         return;
@@ -272,7 +276,7 @@ void slog(int nLevel, int nFlag, const char *pMsg, ...)
     va_end(args);
 
     /* Check logging levels */
-    if(!nLevel || nLevel <= g_slogCfg.nLogLevel || nLevel <= g_slogCfg.nFileLevel)
+    if (!nLevel || nLevel <= g_slogCfg.nLogLevel || nLevel <= g_slogCfg.nFileLevel)
     {
         SlogDate date;
         slog_get_date(&date);
@@ -281,10 +285,11 @@ void slog(int nLevel, int nFlag, const char *pMsg, ...)
         memset(sMessage, 0, sizeof(sMessage));
 
         slog_prepare_output(sInput, &date, nFlag, 1, sMessage, sizeof(sMessage));
-        if (nLevel <= g_slogCfg.nLogLevel) printf("%s\n", sMessage);
+        if (nLevel <= g_slogCfg.nLogLevel)
+            printf("%s\n", sMessage);
 
         /* Save log in the file */
-        if ((g_slogCfg.nToFile && nLevel <= g_slogCfg.nFileLevel) || 
+        if ((g_slogCfg.nToFile && nLevel <= g_slogCfg.nFileLevel) ||
             (g_slogCfg.nErrLog && (nFlag == (SLOG_ERROR | SLOG_PANIC | SLOG_FATAL))))
         {
             if (g_slogCfg.nPretty)
@@ -347,7 +352,7 @@ void slog_config_set(SlogConfig *pCfg)
     slog_sync_unlock();
 }
 
-void slog_init(const char* pName, const char* pConf, int nLogLevel, int nTdSafe)
+void slog_init(const char *pName, const char *pConf, int nLogLevel, int nTdSafe)
 {
     /* Set up default values */
     memset(g_slogCfg.sFileName, 0, sizeof(g_slogCfg.sFileName));

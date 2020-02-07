@@ -214,7 +214,7 @@ int greet(config_t *config, bool checkDB, char *cmd)
     slog(0, SLOG_INFO, "\t- bloom filter false positive rate: %f", config->fpRate);
     if (strcmp(cmd, "shrink") == 0)
         slog(0, SLOG_INFO, "\t- number of threads: %f", config->numThreads);
-    slog(0, SLOG_LIVE, "starting %s subcommand...", cmd);
+    slog(0, SLOG_LIVE, "starting the %s subcommand...", cmd);
     return 0;
 }
 
@@ -426,7 +426,8 @@ int main(int argc, char *argv[])
         }
 
         // set up the requested database
-        // TODO: only BIGSI hardcoded for now
+        // TODO: only BIGSI hardcoded for now so nothing smart needed yet
+        slog(0, SLOG_LIVE, "setting up empty sketch database...\n");
         if (setupDB(config, 0))
         {
             configDestroy(config);
@@ -434,10 +435,10 @@ int main(int argc, char *argv[])
         }
         slog(0, SLOG_INFO, "\t- number of hashes per bloom filter: %llu", config->numHashes);
         slog(0, SLOG_INFO, "\t- number of bits used per bloom filter: %llu", config->numBits);
-        slog(0, SLOG_INFO, "\t- writing BIGSI database at: %s", config->dbDir);
+        slog(0, SLOG_INFO, "\t- storing database at: %s", config->dbDir);
 
         // run sketch with either the positional arguments or STDIN
-        slog(0, SLOG_LIVE, "collecting sequences...\n");
+        slog(0, SLOG_LIVE, "processing sequences...\n");
         bool useSTDIN = true;
         for (i = os.ind + om.ind; i < argc; ++i)
         {
@@ -545,12 +546,13 @@ int main(int argc, char *argv[])
         }
 
         // load the database
+        slog(0, SLOG_LIVE, "loading up the reference sketch database...\n");
         if (loadDB(config, 0))
         {
             configDestroy(config);
             return -1;
         }
-        slog(0, SLOG_INFO, "\t- reference database location: %s", config->dbDir);
+        slog(0, SLOG_INFO, "\t- database location: %s", config->dbDir);
         slog(0, SLOG_INFO, "\t- number of hashes functions used in BIGSI: %llu", config->numHashes);
         slog(0, SLOG_INFO, "\t- number of rows in BIGSI: %llu", config->numBits);
         slog(0, SLOG_INFO, "\t- number of colours in BIGSI: %u", config->bigsi->colourIterator);

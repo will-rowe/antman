@@ -42,4 +42,16 @@ TODO:
   - priorities:
     - sort out bloom filter logic (there is two lots of hashing happening in different places)
     - set up an efficient way to translate bigsi k-mer queries
-- set up threads properly (including numProcs via CLI)
+- set up threads properly
+  - sketch command needs threads
+  - set up the default proc number intelligently
+- update run-antman-tests.py to include test data
+
+now working
+daemon is picking up fastq files and is controlled via CLI nicely
+daemon will create a new job for each file and send it to the threadpool, along with the function to run
+
+now need to have a set of functions to run on fastq files. Idea is to combine / sort out the sequence.h and sketch.h files
+the solution needs to be a function to read a fastq file, process each sequence, get the k-mers and add to bloom filter
+
+does the bloom filter hash or am I passing hashed k-mers via the sequence/sketch function?

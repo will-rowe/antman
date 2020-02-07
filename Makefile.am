@@ -13,6 +13,7 @@ OBJS =                  src/bitvector.o \
 						src/hashmap.o \
 						src/heap.o \
 						src/helpers.o \
+						src/nthash.o \
 						src/sequence.o \
 						src/sketch.o \
 						src/watcher.o \
