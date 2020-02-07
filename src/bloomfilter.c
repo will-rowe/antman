@@ -12,7 +12,7 @@
  */
 
 // bloomAddOrQuery will query or add to a bloom filter
-static inline int bloomAddOrQuery(bloomfilter_t *bf, const void *buffer, int len, uint8_t *result)
+static inline int bloomAddOrQuery(bloomfilter_t *bf, uint64_t *hashValues, uint8_t *result)
 {
 
   // check bloom filter is good to go
@@ -23,13 +23,13 @@ static inline int bloomAddOrQuery(bloomfilter_t *bf, const void *buffer, int len
 
   // set up the hash calc
 
-  // loop over the hash funcs
+  // loop over the hash values
   int hits = 0;
   for (int i = 0; i < bf->numHashes; i++)
   {
 
-    // get a hash value
-    int hv = getHashVal(buffer, len, i, bvCapacity(bf->bitvector));
+    // get the bit vector location
+    uint64_t hv = hashValues[i] %  bvCapacity(bf->bitvector);
 
     // if we're adding, set the bit
     if (result == NULL)
@@ -66,20 +66,15 @@ static inline int bloomAddOrQuery(bloomfilter_t *bf, const void *buffer, int len
  *      buffer                    - the thing to hash
  *      len                       - the length of the buffer
  *      iterator                  - used to vary the hash for the same buffer
- *      modulo                    - used to restrict the hash value between 0->modulo
  * 
  * returns:
  *      a hash value
- * 
- * notes:
- *      this is exported so that BIGSI can use the same function for queries
- *      TODO: this isn't ideal and shouldn't be exported, will get a better solution
  */
-unsigned int getHashVal(const void *buffer, int len, int iterator, int modulo)
+unsigned int getHashVal(const void *buffer, int len, int iterator)
 {
   register unsigned int a = murmurhash(buffer, len, 0x9747b28c);
   register unsigned int b = murmurhash(buffer, len, a);
-  return ((a + iterator * b) % modulo);
+  return (a + iterator * b);
 }
 
 /*****************************************************************************
@@ -195,7 +190,7 @@ bloomfilter_t *bfInitWithSize(uint64_t numBits, uint64_t numHashes)
 }
 
 /*****************************************************************************
- * bfAdd will add a value into a bloom filter.
+ * bfAdd will add hash a query and insert the hashes into the bloom filter.
  * 
  * arguments:
  *      bf      - the bloom filter
@@ -207,11 +202,29 @@ bloomfilter_t *bfInitWithSize(uint64_t numBits, uint64_t numHashes)
  */
 int bfAdd(bloomfilter_t *bf, const void *buffer, uint64_t len)
 {
-  return bloomAddOrQuery(bf, buffer, len, NULL);
+
+  // set up the hash values array
+  uint64_t *hashValues;
+  hashValues = calloc(sizeof(uint64_t), bf->numHashes);
+  if (!hashValues)
+    return -1;
+
+  // hash the input
+  for (int i = 0; i < bf->numHashes; i++)
+  {
+    hashValues[i] = getHashVal(buffer, len, i);
+  }
+
+  // add the hashes to the bloom filter
+  int retVal = 0;
+  retVal = bloomAddOrQuery(bf, hashValues, NULL);
+  free(hashValues);
+  return retVal;
 }
 
 /*****************************************************************************
- * bfQuery will check a bloom filter for the presence of a value.
+ * bfQuery will hash a query, check the bloom filter and set a result to true
+ * if all hashes exist in the filter for the query.
  * 
  * arguments:
  *      bf      - the bloom filter
@@ -224,7 +237,64 @@ int bfAdd(bloomfilter_t *bf, const void *buffer, uint64_t len)
  */
 int bfQuery(bloomfilter_t *bf, const void *buffer, uint64_t len, uint8_t *result)
 {
-  return bloomAddOrQuery(bf, buffer, len, result);
+  // set up the hash values array
+  uint64_t *hashValues;
+  hashValues = calloc(sizeof(uint64_t), bf->numHashes);
+  if (!hashValues)
+    return -1;
+
+  // hash the input
+  for (int i = 0; i < bf->numHashes; i++)
+  {
+    hashValues[i] = getHashVal(buffer, len, i);
+  }
+
+  // add the hashes to the bloom filter
+  int retVal = 0;
+  retVal = bloomAddOrQuery(bf, hashValues, result);
+  free(hashValues);
+  return retVal;
+}
+
+/*****************************************************************************
+ * bfAddPC will add precomputed hash values to the bloom filter.
+ * 
+ * arguments:
+ *      bf          - the bloom filter
+ *      hashValues  - the hash values to add
+ *      len         - the number of hash values being added
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *    it's the caller's job to use a consistent hash function for a bloom filter instance
+ */
+int bfAddPC(bloomfilter_t *bf, uint64_t *hashValues, unsigned int len)
+{
+  assert(len == bf->numHashes);
+  return bloomAddOrQuery(bf, hashValues, NULL);
+}
+
+/*****************************************************************************
+ * bfQueryPC will check the bloom filter and set a result to true
+ * if all precomputed hashes exist in the filter for the query.
+ * 
+ * arguments:
+ *      bf          - the bloom filter
+ *      hashValues  - the hash values to add
+ *      len         - the number of hash values being added
+ * 
+ * returns:
+ *      0 on success, -1 on error
+ * 
+ * note:
+ *    it's the caller's job to use a consistent hash function for a bloom filter instance
+ */
+int bfQueryPC(bloomfilter_t *bf, uint64_t *hashValues, unsigned int len, uint8_t *result)
+{
+  assert(len == bf->numHashes);
+  return bloomAddOrQuery(bf, hashValues, result);
 }
 
 /*****************************************************************************

@@ -325,12 +325,12 @@ int bigsIndex(bigsi_t *bigsi)
 
 /*****************************************************************************
  * bigsQuery will determine if any sequences in the BIGSI contain a query
- * k-mer.
+ * k-mer (provided as one or more hash values).
  * 
  * arguments:
  *      bigsi                     - the BIGSI data structure
- *      buffer                    - the query k-mer
- *      len                       - the length of the buffer
+ *      hashValues                - the hash values to query
+ *      len                       - the number of hash values being added
  *      result                    - an initialised bit vector to return the colours containing the query k-mer
  * 
  * returns:
@@ -339,7 +339,7 @@ int bigsIndex(bigsi_t *bigsi)
  * note:
  *      it is the caller's responsibility to check and free the result
  */
-int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
+int bigsQuery(bigsi_t *bigsi, uint64_t *hashValues, unsigned int len, bitvector_t *result)
 {
     // check the BIGSI is ready for querying
     if (!bigsi->indexed)
@@ -349,9 +349,14 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
     }
 
     // check a k-mer has been provided
-    if (!buffer)
+    if (!hashValues)
     {
         fprintf(stderr, "error: no k-mer provided\n");
+        return -1;
+    }
+    if (len != bigsi->numHashes)
+    {
+        fprintf(stderr, "error: number of query hashes does not match the number used during bigsi creation\n");
         return -1;
     }
 
@@ -380,13 +385,13 @@ int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result)
 
     // hash the query k-mer n times using the same hash func as for the BIGSI bloom filters
     unsigned int hv;
-    for (int i = 0; i < bigsi->numHashes; i++)
+    for (int i = 0; i < len; i++)
     {
         memset(&key, 0, sizeof(key));
         memset(&bv, 0, sizeof(bv));
 
         // get the hash value
-        hv = getHashVal(buffer, len, i, bigsi->numBits);
+        hv = hashValues[i] % bigsi->numBits;
 
         // setup the DB query
         key.data = &hv;

@@ -164,6 +164,14 @@ static char *test_bigsQuery()
   char kmerB[] = "ggg"; // contained in sequence 1
   //char kmerC[] = "cgt"; // contained in sequence 2
   char kmerD[] = "ccc"; // not in either sequence
+  uint64_t *kmerBhashes = calloc(sizeof(uint64_t), bigsi->numHashes);
+  uint64_t *kmerDhashes = calloc(sizeof(uint64_t), bigsi->numHashes);
+  for (int i = 0; i < bigsi->numHashes; i++)
+  {
+    fprintf(stderr, "num bigsi hashes: %u\n\n", bigsi->numHashes);
+    kmerBhashes[i] = getHashVal(kmerB, 3, i);
+    kmerDhashes[i] = getHashVal(kmerD, 3, i);
+  }
 
   // get the result ready
   bitvector_t *result = bvInit(bigsi->colourIterator);
@@ -173,7 +181,7 @@ static char *test_bigsQuery()
   }
 
   // run the query function on a k-mer which isn't in BIGSI
-  if (bigsQuery(bigsi, &kmerD, 3, result))
+  if (bigsQuery(bigsi, kmerDhashes, bigsi->numHashes, result))
   {
     return ERR_query;
   }
@@ -189,7 +197,7 @@ static char *test_bigsQuery()
   }
 
   // run the query function on a k-mer that is in BIGSI
-  if (bigsQuery(bigsi, &kmerB, 3, result))
+  if (bigsQuery(bigsi, kmerBhashes, bigsi->numHashes, result))
   {
     return ERR_query;
   }
@@ -235,6 +243,8 @@ static char *test_bigsQuery()
   }
 
   // clean up the test
+  free(kmerBhashes);
+  free(kmerDhashes);
   bvDestroy(result);
   if (bigsFlush(bigsi) != 0)
   {

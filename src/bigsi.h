@@ -80,7 +80,7 @@ typedef struct bigsi
 bigsi_t *bigsInit(int numBits, int numHashes, const char *dbDir);
 int bigsAdd(bigsi_t *bigsi, map_bloomfilter_t id2bf, int numEntries);
 int bigsIndex(bigsi_t *bigsi);
-int bigsQuery(bigsi_t *bigsi, const void *buffer, int len, bitvector_t *result);
+int bigsQuery(bigsi_t *bigsi,uint64_t *hashValues, unsigned int len, bitvector_t *result);
 int bigsLookupColour(bigsi_t *bigsi, int colour, char **result);
 int bigsDestroy(bigsi_t *bigsi);
 int bigsFlush(bigsi_t *bigsi);

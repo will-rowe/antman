@@ -25,12 +25,14 @@ typedef struct BloomFilter
 /*****************************************************************************
  * function prototypes
  */
-unsigned int getHashVal(const void *buffer, int len, int iterator, int modulo);
-int bfCalc(uint64_t estCapacity, double collisionProbability, uint64_t *numBitsPtr, uint64_t *numHashesPtr);
 bloomfilter_t *bfInit(uint64_t estCapacity, double collisionProbability);
 bloomfilter_t *bfInitWithSize(uint64_t numBits, uint64_t numHashes);
 int bfAdd(bloomfilter_t *bf, const void *buffer, uint64_t len);
 int bfQuery(bloomfilter_t *bf, const void *buffer, uint64_t len, uint8_t *result);
+int bfAddPC(bloomfilter_t *bf, uint64_t *hashValues, unsigned int len);
+int bfQueryPC(bloomfilter_t *bf, uint64_t *hashValues, unsigned int len, uint8_t *result);
 int bfDestroy(bloomfilter_t *bf);
 
+int bfCalc(uint64_t estCapacity, double collisionProbability, uint64_t *numBitsPtr, uint64_t *numHashesPtr);
+unsigned int getHashVal(const void *buffer, int len, int iterator);
 #endif
