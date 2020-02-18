@@ -255,12 +255,12 @@ static inline bool NTMC64(const char *kmerSeq, const unsigned int k, const unsig
         *rhVal ^= seedTab[(unsigned char)kmerSeq[i] & cpOff];
     }
     bVal = (*rhVal < *fhVal) ? *rhVal : *fhVal;
-    hVal[0] = bVal;
+    *hVal = bVal;
     for (unsigned i = 1; i < m; i++)
     {
         tVal = bVal * (i ^ k * multiSeed);
         tVal ^= tVal >> multiShift;
-        hVal[i] = tVal;
+        *(hVal + i) = tVal;
     }
     return true;
 }
@@ -270,12 +270,12 @@ static inline void NTMC64s(const unsigned char charOut, const unsigned char char
 {
     uint64_t bVal = 0, tVal = 0;
     bVal = NTC64(charOut, charIn, k, fhVal, rhVal);
-    hVal[0] = bVal;
+    *hVal = bVal;
     for (unsigned i = 1; i < m; i++)
     {
         tVal = bVal * (i ^ k * multiSeed);
         tVal ^= tVal >> multiShift;
-        hVal[i] = tVal;
+        *(hVal + i) = tVal;
     }
 }
 

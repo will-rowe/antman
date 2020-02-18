@@ -49,7 +49,7 @@ void configDestroy(config_t *config)
     free(config->dbDir);
     free(config->white_list);
     if (config->bigsi)
-        bigsDestroy(config->bigsi); // TODO: should check for errors here
+        bigsDestroy(config->bigsi); // NOTE: this will flush the DB if it's there, or just clear memory if not. TODO: should check for errors here
     free(config);
     config = NULL;
 }

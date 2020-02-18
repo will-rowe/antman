@@ -25,10 +25,10 @@
 // return the value of a specified bit within the bit vector
 #define BV_GET_BIT(byte, bit) (uint8_t)((byte >> bit) & 0x01)
 
-// return an updated byte with the specified bit set
+// update byte with the specified bit set
 #define BV_SET_BIT(byte, bit) byte |= BV_BIT_MASK(bit)
 
-// return an updated byte with the specified bit unset
+// update byte with the specified bit unset
 #define BV_UNSET_BIT(byte, bit) byte &= ~BV_BIT_MASK(bit)
 
 /*****************************************************************************
@@ -102,18 +102,25 @@ static inline int bvHelper(bitvector_t *bv, uint64_t bit, uint8_t *val, uint8_t 
     // if it is a set request
     if (val)
     {
-        // set the byte
+        // set the byte if it's not already set
+        // TODO: this is two array accesses - can get rid of the check and just run pop count when bit vector needed?
         if (*val == 1)
         {
-            BV_SET_BIT(bv->buffer[byteIndex], bitIndex);
-            bv->count++;
+            if (!BV_GET_BIT(bv->buffer[byteIndex], bitIndex))
+            {
+                BV_SET_BIT(bv->buffer[byteIndex], bitIndex);
+                bv->count++;
+            }
         }
         else
 
         // unset the byte
         {
-            BV_UNSET_BIT(bv->buffer[byteIndex], bitIndex);
-            bv->count--;
+            if (BV_GET_BIT(bv->buffer[byteIndex], bitIndex))
+            {
+                BV_UNSET_BIT(bv->buffer[byteIndex], bitIndex);
+                bv->count--;
+            }
         }
     }
 
@@ -236,6 +243,7 @@ bitvector_t *bvClone(const bitvector_t *bv)
     // check the input bit vector
     assert(bv != NULL);
     assert(bv->capacity > 0);
+    assert(bv->bufSize > 0);
 
     // allocate memory for the bit vector struct
     bitvector_t *clone;

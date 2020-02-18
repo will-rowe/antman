@@ -21,15 +21,13 @@ static inline int bloomAddOrQuery(bloomfilter_t *bf, uint64_t *hashValues, uint8
     return -1;
   }
 
-  // set up the hash calc
-
   // loop over the hash values
   int hits = 0;
   for (int i = 0; i < bf->numHashes; i++)
   {
 
     // get the bit vector location
-    uint64_t hv = hashValues[i] %  bvCapacity(bf->bitvector);
+    uint64_t hv = *(hashValues + i) % bvCapacity(bf->bitvector);
 
     // if we're adding, set the bit
     if (result == NULL)
@@ -51,7 +49,6 @@ static inline int bloomAddOrQuery(bloomfilter_t *bf, uint64_t *hashValues, uint8
       hits += hit;
     }
   }
-
   if (hits == bf->numHashes)
   {
     *result = 1;
@@ -211,9 +208,7 @@ int bfAdd(bloomfilter_t *bf, const void *buffer, uint64_t len)
 
   // hash the input
   for (int i = 0; i < bf->numHashes; i++)
-  {
-    hashValues[i] = getHashVal(buffer, len, i);
-  }
+    *(hashValues + i) = getHashVal(buffer, len, i);
 
   // add the hashes to the bloom filter
   int retVal = 0;
@@ -245,9 +240,7 @@ int bfQuery(bloomfilter_t *bf, const void *buffer, uint64_t len, uint8_t *result
 
   // hash the input
   for (int i = 0; i < bf->numHashes; i++)
-  {
-    hashValues[i] = getHashVal(buffer, len, i);
-  }
+    *(hashValues + i) = getHashVal(buffer, len, i);
 
   // add the hashes to the bloom filter
   int retVal = 0;

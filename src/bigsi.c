@@ -1,11 +1,15 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #include "3rd-party/frozen.h"
 
+#include "3rd-party/slog.h"
+
 #include "bigsi.h"
+#include "errors.h"
 
 /*****************************************************************************
  * bigsInit will initiate a BIGSI.
@@ -202,9 +206,7 @@ int bigsIndex(bigsi_t *bigsi)
     // initialize the Berkeley DBs
     setFilenames(bigsi);
     int ret;
-    u_int32_t keyFlags, openFlags;
-    openFlags = DB_CREATE | DB_EXCL;
-    keyFlags = 0;
+    u_int32_t openFlags = DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN | DB_INIT_MPOOL | DB_THREAD;
     DBT key, data;
     ret = initDBs(bigsi, PROG_NAME, stderr, openFlags);
     if (ret)
@@ -283,7 +285,7 @@ int bigsIndex(bigsi_t *bigsi)
         data.size = (sizeof(bitvector_t) + (sizeof(uint8_t) * newBV->bufSize));
 
         // add it
-        if (bigsi->bitvectors_dbp->put(bigsi->bitvectors_dbp, NULL, &key, &data, keyFlags))
+        if (bigsi->bitvectors_dbp->put(bigsi->bitvectors_dbp, NULL, &key, &data, 0))
         {
             fprintf(stderr, "error: could not add bit vector to database (%u)\n", *(int *)key.data);
             return -1;
@@ -306,7 +308,7 @@ int bigsIndex(bigsi_t *bigsi)
         key.size = sizeof(colour);
         data.data = bigsi->colourArray[colour];
         data.size = (u_int32_t)strlen(bigsi->colourArray[colour]) + 1;
-        if (bigsi->colours_dbp->put(bigsi->colours_dbp, NULL, &key, &data, keyFlags))
+        if (bigsi->colours_dbp->put(bigsi->colours_dbp, NULL, &key, &data, 0))
         {
             fprintf(stderr, "error: could not add colour to database (%u -> %s)\n", *(int *)key.data, (char *)data.data);
             return -1;
@@ -320,7 +322,9 @@ int bigsIndex(bigsi_t *bigsi)
     // no longer need the duplicateChecker
     map_deinit(&bigsi->idChecker);
     bigsi->indexed = true;
-    return 0;
+
+    // check the DB
+    return checkDB(bigsi);
 }
 
 /*****************************************************************************
@@ -334,75 +338,60 @@ int bigsIndex(bigsi_t *bigsi)
  *      result                    - an initialised bit vector to return the colours containing the query k-mer
  * 
  * returns:
- *      0 on success, -1 on error
+ *      0 on success or an error code
  * 
  * note:
  *      it is the caller's responsibility to check and free the result
+ *      it is the caller's responsibility to provide a pointer to an initiated, empty bit vector
  */
 int bigsQuery(bigsi_t *bigsi, uint64_t *hashValues, unsigned int len, bitvector_t *result)
 {
+    // check a k-mer and result bit vector have been provided
+    if (!hashValues || !result)
+        return ERROR_NULL_ARGUMENT;
+
     // check the BIGSI is ready for querying
     if (!bigsi->indexed)
-    {
-        fprintf(stderr, "error: need to run the bigsIndex function first\n");
-        return -1;
-    }
+        return ERROR_BIGSI_UNINDEXED;
 
-    // check a k-mer has been provided
-    if (!hashValues)
-    {
-        fprintf(stderr, "error: no k-mer provided\n");
-        return -1;
-    }
+    // check the query hash vector matches the BIGSI settings
     if (len != bigsi->numHashes)
-    {
-        fprintf(stderr, "error: number of query hashes does not match the number used during bigsi creation\n");
-        return -1;
-    }
+        return ERROR_BIGSI_HASH_MISMATCH;
 
-    // check we can send the result
-    if (!result)
-    {
-        fprintf(stderr, "error: no pointer provided for returning query results\n");
-        return -1;
-    }
+    // check the result bit vector can hold all the colours
     if (result->capacity != bigsi->colourIterator)
-    {
-        fprintf(stderr, "error: result bit vector capacity does not match number of colours in BIGSI\n");
-        return -1;
-    }
-    if (result->count != 0)
-    {
-        fprintf(stderr, "error: result bit vector isn't empty\n");
-        return -1;
-    }
+        return ERROR_BIGSI_RESULT_MISMATCH;
 
     // set up the queries
-    int ret;
-    u_int32_t keyFlags;
+    int ret = 0;
     DBT key, bv;
-    keyFlags = 0;
+    memset(&key, 0, sizeof(key));
+    memset(&bv, 0, sizeof(bv));
 
-    // hash the query k-mer n times using the same hash func as for the BIGSI bloom filters
     unsigned int hv;
+    key.ulen = sizeof(hv);
+    key.size = sizeof(hv);
+    key.flags = DB_DBT_USERMEM;
+    bv.flags = DB_DBT_MALLOC;
+
+    // collect the query hashes, get the correspoding bloom filter bits and retrieve the BIGSI rows
     for (int i = 0; i < len; i++)
     {
-        memset(&key, 0, sizeof(key));
-        memset(&bv, 0, sizeof(bv));
 
-        // get the hash value
-        hv = hashValues[i] % bigsi->numBits;
+        // get the hash value location
+        hv = *(hashValues + i) % bigsi->numBits;
 
         // setup the DB query
         key.data = &hv;
-        key.size = sizeof(hv);
-        bv.data = NULL;
-        bv.size = 0;
+
+        slog(0, SLOG_LIVE, "query hashvale location: %i , size = %i, pointer to db = %i", *(int *)(key.data), key.size, bigsi->bitvectors_dbp);
 
         // query the DB for the corresponding bit vector in BIGSI for this hash value
-        if ((ret = bigsi->bitvectors_dbp->get(bigsi->bitvectors_dbp, NULL, &key, &bv, keyFlags)) != 0)
+        ret = bigsi->bitvectors_dbp->get(bigsi->bitvectors_dbp, 0, &key, &bv, 0);
+        if (ret != 0)
         {
-            fprintf(stderr, "error: missing row in BIGSI for hash value: %d\n", hv);
+            slog(0, SLOG_LIVE, "bdb query failed: %i", ret);
+            slog(0, SLOG_LIVE, "%s\n", db_strerror(ret));
             return -1;
         }
 
@@ -417,20 +406,14 @@ int bigsQuery(bigsi_t *bigsi, uint64_t *hashValues, unsigned int len, bitvector_
         {
             // first BIGSI hit can be the basis of the result, so just OR
             if (bvBOR(result, (bitvector_t *)bv.data, result) != 0)
-            {
-                fprintf(stderr, "error: could not bitwise OR during BIGSI query\n");
-                return -1;
-            }
+                return ERROR_BIGSI_OR_FAIL;
         }
         else
         {
 
             // bitwise AND the current result with the new BIGSI hit
             if (bvBANDupdate(result, (bitvector_t *)bv.data) != 0)
-            {
-                fprintf(stderr, "error: could not bitwise AND during BIGSI query\n");
-                return -1;
-            }
+                return ERROR_BIGSI_AND_FAIL;
 
             // if the current result is now empty, we can leave early
             if (bvCount(result) == 0)
@@ -482,18 +465,18 @@ int bigsLookupColour(bigsi_t *bigsi, int colour, char **result)
 
     // set up the query
     int ret;
-    u_int32_t keyFlags;
     DBT key, seqID;
-    keyFlags = 0;
     memset(&key, 0, sizeof(key));
     memset(&seqID, 0, sizeof(seqID));
     key.data = &colour;
     key.size = sizeof(colour);
     seqID.data = NULL;
     seqID.size = 0;
+    key.flags = DB_DBT_USERMEM;
+    seqID.flags = DB_DBT_MALLOC;
 
     // query the DB for the corresponding sequence ID in BIGSI for this colour
-    if ((ret = bigsi->colours_dbp->get(bigsi->colours_dbp, NULL, &key, &seqID, keyFlags)) != 0)
+    if ((ret = bigsi->colours_dbp->get(bigsi->colours_dbp, NULL, &key, &seqID, 0)) != 0)
     {
         fprintf(stderr, "error: can't find colour in BIGSI (colour %d)\n", colour);
         return -1;
@@ -657,15 +640,23 @@ bigsi_t *bigsLoad(const char *dbDir)
 
     // load the dbs
     int ret;
-    u_int32_t openFlags;
-    //openFlags = DB_THREAD | DB_RDONLY;
-    openFlags = DB_RDONLY;
+    u_int32_t openFlags = DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN | DB_INIT_MPOOL | DB_THREAD;
+    //openFlags = 0;
     if ((ret = initDBs(bigsi, PROG_NAME, stderr, openFlags)) != 0)
     {
         fprintf(stderr, "error: could not open the Berkeley DBs (%u)\n", ret);
+        free(bigsi);
         return NULL;
     }
     bigsi->indexed = true;
+
+    // check the DB look good
+    if (checkDB(bigsi) != 0)
+    {
+        fprintf(stderr, "error: Berkeley DB check failed\n");
+        free(bigsi);
+        return NULL;
+    }
     return bigsi;
 }
 
@@ -749,7 +740,7 @@ int openDB(DB **dbpp,                /* The DB handle that we are opening */
                     NULL,             /* Txn pointer */
                     filename,         /* File name */
                     NULL,             /* Logical db name (unneeded) */
-                    BERKELEY_DB_TYPE, /* Database type (using queue) */
+                    BERKELEY_DB_TYPE, /* Database type (using btree) */
                     openFlags,        /* Open flags */
                     0);               /* File mode. Using defaults */
     if (ret != 0)
@@ -779,4 +770,27 @@ void setFilenames(bigsi_t *bigsi)
     size = strlen(bigsi->dbDirectory) + strlen(COLOURS_DB_FILENAME) + 2;
     bigsi->colours_db = malloc(size);
     snprintf(bigsi->colours_db, size, "%s/%s", bigsi->dbDirectory, COLOURS_DB_FILENAME);
+}
+
+// checkDB is a helper function to check that the berkeleyDB is accessible
+int checkDB(bigsi_t *bigsi)
+{
+    assert(bigsi != NULL);
+
+    // check that the Berkeley DB works by querying the last few rows
+    bitvector_t *result = bvInit(bigsi->colourIterator);
+    assert(result != NULL);
+    int err = 0;
+    uint64_t *hvs = calloc(bigsi->numHashes, sizeof(uint64_t));
+    for (int i = 0; i < bigsi->numHashes; i++)
+        *(hvs + i) = bigsi->numBits - 1 - i;
+    err = bigsQuery(bigsi, hvs, bigsi->numHashes, result);
+    free(hvs);
+    free(result);
+    if (err != 0)
+    {
+        fprintf(stderr, "could not query the BIGSI for known entries: %s\n", printError(err));
+        return -1;
+    }
+    return 0;
 }

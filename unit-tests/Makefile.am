@@ -4,7 +4,8 @@ check_PROGRAMS = 	test_config \
                     test_bitvector \
                     test_bloomfilter \
                     test_bigsi \
-                    test_nthash
+                    test_nthash \
+                    test_sequence
 
 AM_CPPFLAGS =       -I${srcdir}/..
 AM_CFLAGS =         -Wall -std=gnu99
@@ -22,3 +23,5 @@ test_bigsi_CFLAGS =               -std=gnu99 -g $(AM_CFLAGS)
 test_bigsi_LDADD =                $(LD_ADD)
 test_nthash_CFLAGS =               -std=gnu99 -g $(AM_CFLAGS)
 test_nthash_LDADD =                $(LD_ADD)
+test_sequence_CFLAGS =               -std=gnu99 -g $(AM_CFLAGS)
+test_sequence_LDADD =                $(LD_ADD)
